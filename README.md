@@ -1,6 +1,8 @@
 # SoAk Quiz App
 
-A real-time, serverless quiz application built for live event hosting. 
+A real-time, serverless quiz application built for live event hosting.
+
+🚀 **Live Application**: [soak-quiz-app.web.app](https://soak-quiz-app.web.app)
 
 The application uses **React + TypeScript + Vite** for the frontend, styled with **MUI (Material UI) v9**, and relies on **Firebase (Auth, Firestore, Cloud Functions, Hosting)** for real-time reactivity and backend logic.
 
