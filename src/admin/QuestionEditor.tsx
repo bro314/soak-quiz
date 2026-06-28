@@ -65,6 +65,11 @@ export function QuestionEditor() {
       } else {
         setError("Frage nicht gefunden.");
       }
+      setLoading(false);
+    }, (err) => {
+      console.error(err);
+      setError("Fehler beim Laden der Frage: " + err.message);
+      setLoading(false);
     });
 
     // Listen to Question detail
