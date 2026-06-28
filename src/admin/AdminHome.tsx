@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import { createEventCallable, loginAdminCallable } from "../firebase/functions";
 import { AdminLayout } from "./components/AdminLayout";
@@ -41,25 +41,33 @@ export function AdminHome() {
   const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
-    const q = query(collection(db, "events"));
+    if (!claims.eventId || claims.role !== "admin") {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const docRef = doc(db, "events", claims.eventId);
     const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list: Event[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as Event);
-        });
-        setEvents(list);
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setEvents([{ id: docSnap.id, ...docSnap.data() } as Event]);
+        } else {
+          setEvents([]);
+        }
         setLoading(false);
       },
       (err) => {
-        console.warn("Could not list all events from Firestore (expected if rules restrict multi-event reads).", err);
+        console.error("Could not load event details:", err);
+        setEvents([]);
         setLoading(false);
       }
     );
 
     return unsubscribe;
-  }, []);
+  }, [claims.eventId, claims.role]);
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
