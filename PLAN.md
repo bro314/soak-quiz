@@ -254,7 +254,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 *Done when:* validating all free-text answers completes the round; tables match computed points. *(Status: Done)*
 
 **M7 — Polish, seed data, deploy.** Seed/test script, responsive pass, final rules review, production deploy to Firebase Hosting + Functions.
-*Done when:* a full end-to-end quiz dry run passes on the deployed app. *(Status: Done - Firestore rules, indexes, Hosting deployed and database seeded; Functions compilation verified, pending billing upgrade)*
+*Done when:* a full end-to-end quiz dry run passes on the deployed app. *(Status: Done)*
 
 ---
 
