@@ -172,7 +172,7 @@ export default function App() {
         color="text.secondary"
         sx={{ mt: 4, opacity: 0.5 }}
       >
-        M3 — Admin Authoring &amp; Status Machine
+        M5 — Participant App
       </Typography>
     </Container>
   );

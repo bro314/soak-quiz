@@ -248,7 +248,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 *Done when:* submitting answers yields correct points + scoreboard; correct answers never leave the server to a participant. *(Status: Done)*
 
 **M5 — Participant app.** All six participant screens, live via `onSnapshot`, mobile-optimized; QR create/login.
-*Done when:* a phone can complete the full journey; status changes appear live; only permitted data is visible.
+*Done when:* a phone can complete the full journey; status changes appear live; only permitted data is visible. *(Status: Done)*
 
 **M6 — Validation screen & score tables.** Flat free-text validation table; event/round score tables.
 *Done when:* validating all free-text answers completes the round; tables match computed points.

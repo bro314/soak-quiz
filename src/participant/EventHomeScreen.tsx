@@ -1,0 +1,250 @@
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { doc, collection, onSnapshot } from "firebase/firestore";
+import { signOut } from "firebase/auth";
+import { db, auth } from "../firebase";
+import { useClaims } from "../hooks/useClaims";
+import type { Event, Round, Scoreboard } from "../types";
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Button from "@mui/material/Button";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import CircularProgress from "@mui/material/CircularProgress";
+import SettingsIcon from "@mui/icons-material/Settings";
+import LogoutIcon from "@mui/icons-material/Logout";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LockIcon from "@mui/icons-material/Lock";
+
+export function EventHomeScreen() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
+  const { claims, loading: claimsLoading } = useClaims();
+
+  const [event, setEvent] = useState<Event | null>(null);
+  const [rounds, setRounds] = useState<Round[]>([]);
+  const [scoreboardList, setScoreboardList] = useState<Scoreboard[]>([]);
+  const [teamScore, setTeamScore] = useState<Scoreboard | null>(null);
+  const [teamName, setTeamName] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Unauthorized if role is not team or eventId does not match
+  const isAuthorized = claims.role === "team" && claims.eventId === eventId;
+  const teamId = claims.teamId;
+
+  useEffect(() => {
+    if (claimsLoading) return;
+    if (!isAuthorized) {
+      navigate(`/event/${eventId}`);
+    }
+  }, [isAuthorized, claimsLoading, eventId, navigate]);
+
+  useEffect(() => {
+    if (!eventId || !teamId || !isAuthorized) return;
+
+    // Listen to event
+    const eventRef = doc(db, "events", eventId);
+    const unsubEvent = onSnapshot(eventRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setEvent({ id: docSnap.id, ...docSnap.data() } as Event);
+      }
+    });
+
+    // Listen to team details
+    const teamRef = doc(db, "events", eventId, "teams", teamId);
+    const unsubTeam = onSnapshot(teamRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setTeamName(docSnap.data().name);
+      }
+    });
+
+    // Listen to rounds
+    const roundsRef = collection(db, "events", eventId, "rounds");
+    const unsubRounds = onSnapshot(roundsRef, (snapshot) => {
+      const list: Round[] = [];
+      snapshot.forEach((d) => {
+        list.push({ id: d.id, ...d.data() } as Round);
+      });
+      list.sort((a, b) => a.number - b.number);
+      setRounds(list);
+    });
+
+    // Listen to own team scoreboard doc
+    const scoreRef = doc(db, "events", eventId, "scoreboard", teamId);
+    const unsubOwnScore = onSnapshot(scoreRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setTeamScore({ teamId: docSnap.id, ...docSnap.data() } as Scoreboard);
+      }
+    });
+
+    // Listen to all scoreboards to compute placement
+    const scoreboardRef = collection(db, "events", eventId, "scoreboard");
+    const unsubScoreboard = onSnapshot(scoreboardRef, (snapshot) => {
+      const list: Scoreboard[] = [];
+      snapshot.forEach((d) => {
+        list.push({ teamId: d.id, ...d.data() } as Scoreboard);
+      });
+      // Sort descending by total score
+      list.sort((a, b) => b.total - a.total);
+      setScoreboardList(list);
+      setLoading(false);
+    }, (err) => {
+      console.error("Scoreboard subscription error", err);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubEvent();
+      unsubTeam();
+      unsubRounds();
+      unsubOwnScore();
+      unsubScoreboard();
+    };
+  }, [eventId, teamId, isAuthorized]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // Wait for auth listener to re-authenticate anonymously, then navigate
+      navigate(`/event/${eventId}`);
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
+  if (claimsLoading || loading) {
+    return (
+      <Container sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8 }}>
+        <CircularProgress color="secondary" />
+      </Container>
+    );
+  }
+
+  // Calculate placement
+  const placementIndex = scoreboardList.findIndex((s) => s.teamId === teamId);
+  const placement = placementIndex !== -1 ? placementIndex + 1 : null;
+  const totalRankedTeams = scoreboardList.length;
+
+  return (
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+        <Box>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
+            {event?.name || "SoAk Quiz"}
+          </Typography>
+          <Typography variant="subtitle2" color="secondary">
+            Eingeloggt als: {teamName}
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            component={Link}
+            to={`/event/${eventId}/settings`}
+            variant="outlined"
+            color="primary"
+            size="small"
+            sx={{ minWidth: 0, p: 1 }}
+          >
+            <SettingsIcon />
+          </Button>
+          <Button
+            onClick={handleLogout}
+            variant="outlined"
+            color="error"
+            size="small"
+            sx={{ minWidth: 0, p: 1 }}
+          >
+            <LogoutIcon />
+          </Button>
+        </Box>
+      </Box>
+
+      {placement && (
+        <Card className="glass" sx={{ mb: 4, background: "linear-gradient(135deg, rgba(124, 77, 255, 0.15) 0%, rgba(0, 229, 255, 0.05) 100%)" }}>
+          <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, py: 3 }}>
+            <EmojiEventsIcon sx={{ fontSize: 40, color: "#FFD740" }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 750 }}>
+                Platz {placement} von {totalRankedTeams}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Gesamtpunkte: {teamScore?.total || 0}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+
+
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+        Runden
+      </Typography>
+
+      <List sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 2 }}>
+        {rounds.map((round) => {
+          const isInactive = round.status === "INACTIVE";
+          const points = teamScore?.perRound?.[round.id] ?? null;
+
+          return (
+            <Card key={round.id} variant="outlined" sx={{ border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  component={Link}
+                  to={`/event/${eventId}/round/${round.id}`}
+                  disabled={isInactive}
+                  sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 650 }}>
+                      Runde {round.number}: {round.title}
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                      {round.status === "ACTIVE" && (
+                        <Typography variant="caption" sx={{ color: "#00E5FF", fontWeight: 650 }}>
+                          Aktiv
+                        </Typography>
+                      )}
+                      {round.status === "VALIDATION" && (
+                        <Typography variant="caption" sx={{ color: "#FFD740", fontWeight: 650 }}>
+                          Auswertung läuft
+                        </Typography>
+                      )}
+                      {round.status === "DONE" && (
+                        <Typography variant="caption" sx={{ color: "#69F0AE", fontWeight: 650 }}>
+                          Beendet
+                        </Typography>
+                      )}
+                      {isInactive && (
+                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                          Noch nicht gestartet
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    {points !== null && (
+                      <Typography variant="body1" sx={{ fontWeight: 700, mr: 1 }}>
+                        {points} Pkt.
+                      </Typography>
+                    )}
+                    {round.status === "ACTIVE" && <PlayArrowIcon color="secondary" />}
+                    {round.status === "DONE" && <CheckCircleIcon color="success" />}
+                    {isInactive && <LockIcon color="disabled" />}
+                  </Box>
+                </ListItemButton>
+              </ListItem>
+            </Card>
+          );
+        })}
+      </List>
+    </Container>
+  );
+}
