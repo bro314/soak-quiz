@@ -251,7 +251,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 *Done when:* a phone can complete the full journey; status changes appear live; only permitted data is visible. *(Status: Done)*
 
 **M6 — Validation screen & score tables.** Flat free-text validation table; event/round score tables.
-*Done when:* validating all free-text answers completes the round; tables match computed points.
+*Done when:* validating all free-text answers completes the round; tables match computed points. *(Status: Done)*
 
 **M7 — Polish, seed data, deploy.** Seed/test script, responsive pass, final rules review, production deploy to Firebase Hosting + Functions.
 *Done when:* a full end-to-end quiz dry run passes on the deployed app.

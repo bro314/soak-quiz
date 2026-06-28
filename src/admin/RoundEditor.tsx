@@ -485,6 +485,9 @@ export function RoundEditor() {
                                 F{q.number}
                               </TableCell>
                             ))}
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>
+                              Gesamt
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -510,8 +513,30 @@ export function RoundEditor() {
                                   </TableCell>
                                 );
                               })}
+                              <TableCell align="right" sx={{ fontWeight: 700, color: "secondary.main" }}>
+                                {questions.reduce((sum, q) => sum + (answerMap.get(`${team.id}__${q.id}`)?.points ?? 0), 0)}
+                              </TableCell>
                             </TableRow>
                           ))}
+                          <TableRow sx={{ "& td, & th": { fontWeight: 700, borderTop: "2px dashed rgba(255, 255, 255, 0.15)" } }}>
+                            <TableCell>Gesamt</TableCell>
+                            {questions.map((q) => {
+                              const totalQuestionPoints = teams.reduce((sum, team) => {
+                                const ans = answerMap.get(`${team.id}__${q.id}`);
+                                return sum + (ans?.points ?? 0);
+                              }, 0);
+                              return (
+                                <TableCell key={q.id} align="right">
+                                  {totalQuestionPoints}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell align="right" sx={{ color: "primary.main" }}>
+                              {teams.reduce((sum, team) => {
+                                return sum + questions.reduce((qSum, q) => qSum + (answerMap.get(`${team.id}__${q.id}`)?.points ?? 0), 0);
+                              }, 0)}
+                            </TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                     </TableContainer>

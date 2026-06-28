@@ -388,6 +388,26 @@ export function EventDashboard() {
                               </TableRow>
                             );
                           })}
+                          <TableRow sx={{ "& td, & th": { fontWeight: 700, borderTop: "2px dashed rgba(255, 255, 255, 0.15)" } }}>
+                            <TableCell>Gesamt</TableCell>
+                            {rounds.map((r) => {
+                              const totalRoundPoints = teams.reduce((sum, team) => {
+                                const score = scoreboardMap.get(team.id);
+                                return sum + (score?.perRound?.[r.id] ?? 0);
+                              }, 0);
+                              return (
+                                <TableCell key={r.id} align="right">
+                                  {totalRoundPoints}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell align="right" sx={{ color: "primary.main" }}>
+                              {teams.reduce((sum, team) => {
+                                const score = scoreboardMap.get(team.id);
+                                return sum + (score?.total ?? 0);
+                              }, 0)}
+                            </TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                     </TableContainer>

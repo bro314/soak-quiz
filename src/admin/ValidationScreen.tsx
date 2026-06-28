@@ -21,7 +21,7 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import CheckIcon from "@mui/icons-material/Check";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import type { Answer, Question } from "../types";
+import type { Answer, Question, Round } from "../types";
 
 export function ValidationScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -31,6 +31,7 @@ export function ValidationScreen() {
   const [questionsMap, setQuestionsMap] = useState<Map<string, Question>>(new Map());
   const [secretAnswersMap, setSecretAnswersMap] = useState<Map<string, string>>(new Map());
   const [teamsMap, setTeamsMap] = useState<Map<string, string>>(new Map()); // teamId -> name
+  const [roundsMap, setRoundsMap] = useState<Map<string, Round>>(new Map());
   const [loading, setLoading] = useState(true);
 
   // Point modifications state
@@ -51,6 +52,15 @@ export function ValidationScreen() {
       setTeamsMap(tMap);
     });
 
+    // Listen to rounds
+    const unsubRounds = onSnapshot(collection(db, `events/${eventId}/rounds`), (snap) => {
+      const rMap = new Map<string, Round>();
+      snap.forEach((d) => {
+        rMap.set(d.id, { id: d.id, ...d.data() } as Round);
+      });
+      setRoundsMap(rMap);
+    });
+
     // Listen to answers
     const unsubAnswers = onSnapshot(collection(db, `events/${eventId}/answers`), async (snap) => {
       const list: Answer[] = [];
@@ -66,6 +76,7 @@ export function ValidationScreen() {
 
     return () => {
       unsubTeams();
+      unsubRounds();
       unsubAnswers();
     };
   }, [eventId]);
@@ -210,13 +221,14 @@ export function ValidationScreen() {
                       {answers.map((ans) => {
                         const cacheKey = `${ans.roundId}__${ans.questionId}`;
                         const q = questionsMap.get(cacheKey);
+                        const r = roundsMap.get(ans.roundId);
                         const correctAns = secretAnswersMap.get(cacheKey) || "";
                         const teamName = teamsMap.get(ans.teamId) || ans.teamId;
 
                         return (
                           <TableRow key={ans.id}>
                             <TableCell>
-                              R{q?.number || "—"} / F{q?.number || "—"}
+                              R{r?.number || "—"} / F{q?.number || "—"}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{q?.title || "Frage wird geladen..."}</TableCell>
                             <TableCell color="text.secondary">{correctAns}</TableCell>
