@@ -245,7 +245,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 *Done when:* an admin can author a complete event and drive every status transition; illegal transitions are rejected. *(Status: Done)*
 
 **M4 — Grading & aggregation (F2).** Trigger function: MC auto-grade, free-text normalize+suggest, scoreboard maintenance, auto `VALIDATION→DONE`.
-*Done when:* submitting answers yields correct points + scoreboard; correct answers never leave the server to a participant.
+*Done when:* submitting answers yields correct points + scoreboard; correct answers never leave the server to a participant. *(Status: Done)*
 
 **M5 — Participant app.** All six participant screens, live via `onSnapshot`, mobile-optimized; QR create/login.
 *Done when:* a phone can complete the full journey; status changes appear live; only permitted data is visible.

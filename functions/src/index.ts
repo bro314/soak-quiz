@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onRequest } from "firebase-functions/v2/https";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as crypto from "crypto";
@@ -245,3 +246,142 @@ export const loginAdmin = onCall({ region: "europe-west1" }, async (request) => 
 
   return { status: "success" };
 });
+
+function normalizeFreeText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+async function gradeAnswer(eventId: string, answerId: string, answerData: any) {
+  const { roundId, questionId, answerText } = answerData;
+  if (!roundId || !questionId) return;
+
+  const questionRef = db.doc(`events/${eventId}/rounds/${roundId}/questions/${questionId}`);
+  const questionSnap = await questionRef.get();
+  if (!questionSnap.exists) {
+    console.error(`Question events/${eventId}/rounds/${roundId}/questions/${questionId} not found.`);
+    return;
+  }
+  const questionData = questionSnap.data();
+  if (!questionData) return;
+
+  const answerSecretRef = db.doc(`events/${eventId}/rounds/${roundId}/questions/${questionId}/secret/answer`);
+  const answerSecretSnap = await answerSecretRef.get();
+  if (!answerSecretSnap.exists) {
+    console.error(`Secret answer for question ${questionId} not found.`);
+    return;
+  }
+  const answerSecretData = answerSecretSnap.data();
+  if (!answerSecretData) return;
+
+  const correctAnswer = answerSecretData.correctAnswer;
+  let points = 0;
+  let validated = false;
+
+  if (questionData.type === "MULTIPLE_CHOICE") {
+    points = answerText === correctAnswer ? 1 : 0;
+    validated = true;
+  } else if (questionData.type === "FREE_TEXT") {
+    const normUser = normalizeFreeText(answerText || "");
+    const normCorrect = normalizeFreeText(correctAnswer || "");
+    points = normUser === normCorrect ? 1 : 0;
+    validated = false;
+  }
+
+  const answerRef = db.doc(`events/${eventId}/answers/${answerId}`);
+  await answerRef.update({
+    points,
+    validated,
+    gradedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+async function updateScoreboardAndRound(eventId: string, teamId: string, roundId: string) {
+  // 1. Recalculate scoreboard for this team
+  const answersRef = db.collection(`events/${eventId}/answers`);
+  const teamAnswersQuery = await answersRef.where("teamId", "==", teamId).get();
+
+  const perRound: { [roundId: string]: number } = {};
+  let total = 0;
+
+  teamAnswersQuery.forEach((doc) => {
+    const data = doc.data();
+    const rId = data.roundId;
+    const pts = Number(data.points) || 0;
+    const val = data.validated;
+    if (val) {
+      perRound[rId] = (perRound[rId] || 0) + pts;
+      total += pts;
+    }
+  });
+
+  const scoreboardRef = db.doc(`events/${eventId}/scoreboard/${teamId}`);
+  await scoreboardRef.set({
+    perRound,
+    total,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  // 2. Check if we need to auto-transition the round to DONE
+  const roundRef = db.doc(`events/${eventId}/rounds/${roundId}`);
+  const roundSnap = await roundRef.get();
+  if (roundSnap.exists) {
+    const roundData = roundSnap.data();
+    if (roundData && roundData.status === "VALIDATION") {
+      const roundAnswersQuery = await answersRef
+        .where("roundId", "==", roundId)
+        .where("validated", "==", false)
+        .limit(1)
+        .get();
+
+      if (roundAnswersQuery.empty) {
+        await roundRef.update({
+          status: "DONE",
+        });
+      }
+    }
+  }
+}
+
+export const onAnswerWritten = onDocumentWritten(
+  {
+    document: "events/{eventId}/answers/{answerId}",
+    region: "europe-west1",
+  },
+  async (event) => {
+    const eventId = event.params.eventId;
+    const answerId = event.params.answerId;
+
+    const beforeDoc = event.data?.before;
+    const afterDoc = event.data?.after;
+
+    if (!afterDoc || !afterDoc.exists) {
+      if (beforeDoc && beforeDoc.exists) {
+        const beforeData = beforeDoc.data();
+        if (beforeData) {
+          await updateScoreboardAndRound(eventId, beforeData.teamId, beforeData.roundId);
+        }
+      }
+      return;
+    }
+
+    const afterData = afterDoc.data();
+    if (!afterData) return;
+
+    const beforeData = beforeDoc && beforeDoc.exists ? beforeDoc.data() : null;
+
+    const isNewDoc = !beforeData;
+    const answerTextChanged = isNewDoc || beforeData.answerText !== afterData.answerText;
+
+    if (answerTextChanged) {
+      await gradeAnswer(eventId, answerId, afterData);
+    } else {
+      const pointsChanged = beforeData && beforeData.points !== afterData.points;
+      const validatedChanged = beforeData && beforeData.validated !== afterData.validated;
+
+      if (pointsChanged || validatedChanged || isNewDoc) {
+        await updateScoreboardAndRound(eventId, afterData.teamId, afterData.roundId);
+      }
+    }
+  }
+);
+
