@@ -274,3 +274,16 @@ Build each screen to match the spec exactly. Status names below are the English 
 2. Execute **one milestone per session**; run the milestone's tests before moving on (the M1 rules tests spin up a local Firestore emulator automatically).
 3. Treat §4 (rules) and §6 (functions) as the security contract — never weaken a rule to make a feature work; fix the data model instead.
 4. Keep the spec open alongside the **§8 Screens** section to verify each screen 1:1.
+
+## 12. Agent Notes & Lessons Learned (from M0)
+
+### MUI v9 Breaking Changes
+- **Icon Imports**: MUI v9 uses different naming conventions for outlined variants. Icons like `CheckCircleOutline` and `ErrorOutline` are named `CheckCircleOutlineOutlined` and `ErrorOutlineOutlined`. Importing the old names results in unresolved module errors during production builds.
+- **Typography API**: The `fontWeight` property is no longer accepted as a direct prop on `<Typography>` elements. Instead, pass it via the `sx` prop (e.g., `sx={{ fontWeight: 600 }}`).
+
+### Cloud Functions Environment
+- Sourcing `.bash_profile` in commands is not persistently supported by the sandbox.
+- When compiling functions with TypeScript 6.0+, you **must** explicitly define `"rootDir": "src"` alongside `"outDir": "lib"` in `functions/tsconfig.json` to prevent compiling layout structure errors. Ensure the package.json `"main"` points directly to `"lib/index.js"`.
+
+### Environment PATH
+- Standard system tools (like `npm` and `gcloud`) are available in the user's homebrew/nvm/downloads folder structures. Explicitly prefix commands with `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$HOME/Downloads/google-cloud-sdk/bin:/opt/homebrew/bin:$PATH"` if commands fail to locate `node`, `npx` or `gcloud`.
