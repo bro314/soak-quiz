@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../firebase";
-import { createEventCallable } from "../firebase/functions";
+import { createEventCallable, loginAdminCallable } from "../firebase/functions";
 import { AdminLayout } from "./components/AdminLayout";
-import { AdminRouteGuard } from "./components/AdminRouteGuard";
 import { Link } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
@@ -25,7 +24,7 @@ import { useClaims } from "../hooks/useClaims";
 export function AdminHome() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const { refreshClaims } = useClaims();
+  const { claims, loading: claimsLoading, refreshClaims } = useClaims();
 
   // Create Event Form state
   const [newEventId, setNewEventId] = useState("");
@@ -35,13 +34,13 @@ export function AdminHome() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState("");
 
+  // Login Event Form state
+  const [loginEventId, setLoginEventId] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
   useEffect(() => {
-    // We query events. Note: to read events list, client needs event E membership custom claims.
-    // In our security rules: matches /events/{eventId} { allow read: if isEventMember(eventId); }
-    // Wait! Since standard rules check isEventMember(eventId), an admin can read the event *they are admin of*.
-    // But listing *all* events requires no claims or a global read. Since rules do matches /events/{eventId} read: if isEventMember(eventId),
-    // a simple collection query of events by a user with claims role 'admin' for event E will return only event E (or it might fail if we query the whole collection).
-    // Let's implement real-time listening of the events collection. If it fails due to rule permissions, we handle it gracefully.
     const q = query(collection(db, "events"));
     const unsubscribe = onSnapshot(
       q,
@@ -77,9 +76,7 @@ export function AdminHome() {
         maxTeamSize,
         adminPassword,
       });
-      // Refresh claims so that the user gets the admin claim for this new event
       await refreshClaims();
-      // Reset form
       setNewEventId("");
       setName("");
       setAdminPassword("");
@@ -92,86 +89,114 @@ export function AdminHome() {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEventId || !loginPassword) {
+      setLoginError("Bitte Event-ID und Passwort eingeben.");
+      return;
+    }
+    setLoginLoading(true);
+    setLoginError("");
+    try {
+      await loginAdminCallable({ eventId: loginEventId, password: loginPassword });
+      await refreshClaims();
+      setLoginEventId("");
+      setLoginPassword("");
+    } catch (err: any) {
+      console.error(err);
+      setLoginError(err.message || "Falsches Passwort oder ungültige Event-ID.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const isAdmin = claims.role === "admin";
+
   return (
-    <AdminRouteGuard>
-      <AdminLayout>
-        <Container maxWidth="lg">
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 800, mb: 4 }}>
-            Event-Management
-          </Typography>
+    <AdminLayout>
+      <Container maxWidth="lg">
+        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 800, mb: 4 }}>
+          Event-Management
+        </Typography>
 
-          <Grid container spacing={4}>
-            {/* Create Event Card */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card className="glass" sx={{ p: 2 }}>
-                <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-                    Neues Event erstellen
-                  </Typography>
+        <Grid container spacing={4}>
+          {/* Create Event Card */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card className="glass" sx={{ p: 2 }}>
+              <CardContent>
+                <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+                  Neues Event erstellen
+                </Typography>
 
-                  {createError && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                      {createError}
-                    </Alert>
-                  )}
+                {createError && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {createError}
+                  </Alert>
+                )}
 
-                  <form onSubmit={handleCreateEvent}>
-                    <TextField
-                      label="Event ID (z.B. soak-2026)"
-                      fullWidth
-                      variant="outlined"
-                      value={newEventId}
-                      onChange={(e) => setNewEventId(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-                      sx={{ mb: 2 }}
-                      required
-                      helperText="Nur Buchstaben, Zahlen, Bindestriche und Unterstriche."
-                    />
-                    <TextField
-                      label="Event Name"
-                      fullWidth
-                      variant="outlined"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Maximale Teamgröße"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={maxTeamSize}
-                      onChange={(e) => setMaxTeamSize(Number(e.target.value))}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Admin Passwort"
-                      type="password"
-                      fullWidth
-                      variant="outlined"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      sx={{ mb: 3 }}
-                      required
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      disabled={createLoading}
-                    >
-                      {createLoading ? <CircularProgress size={24} /> : "Event erstellen"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </Grid>
+                <form onSubmit={handleCreateEvent}>
+                  <TextField
+                    label="Event ID (z.B. soak-2026)"
+                    fullWidth
+                    variant="outlined"
+                    value={newEventId}
+                    onChange={(e) => setNewEventId(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                    sx={{ mb: 2 }}
+                    required
+                    helperText="Nur Buchstaben, Zahlen, Bindestriche und Unterstriche."
+                  />
+                  <TextField
+                    label="Event Name"
+                    fullWidth
+                    variant="outlined"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    sx={{ mb: 2 }}
+                    required
+                  />
+                  <TextField
+                    label="Maximale Teamgröße"
+                    type="number"
+                    fullWidth
+                    variant="outlined"
+                    value={maxTeamSize}
+                    onChange={(e) => setMaxTeamSize(Number(e.target.value))}
+                    sx={{ mb: 2 }}
+                    required
+                  />
+                  <TextField
+                    label="Admin Passwort"
+                    type="password"
+                    fullWidth
+                    variant="outlined"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    sx={{ mb: 3 }}
+                    required
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    size="large"
+                    disabled={createLoading}
+                  >
+                    {createLoading ? <CircularProgress size={24} /> : "Event erstellen"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </Grid>
 
-            {/* List of Events */}
-            <Grid size={{ xs: 12, md: 6 }}>
+          {/* Right Column: List of Events OR Login Form */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            {claimsLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : isAdmin ? (
+              /* Logged In: List of Events */
               <Card className="glass" sx={{ p: 2 }}>
                 <CardContent>
                   <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
@@ -184,7 +209,7 @@ export function AdminHome() {
                     </Box>
                   ) : events.length === 0 ? (
                     <Typography color="text.secondary">
-                      Keine Events gefunden. Erstelle ein neues Event oder logge dich als Admin ein.
+                      Keine Events gefunden. Erstelle links ein neues Event.
                     </Typography>
                   ) : (
                     <List sx={{ width: "100%", bgcolor: "transparent" }}>
@@ -202,10 +227,57 @@ export function AdminHome() {
                   )}
                 </CardContent>
               </Card>
-            </Grid>
+            ) : (
+              /* Not Logged In: Login Form */
+              <Card className="glass" sx={{ p: 2 }}>
+                <CardContent>
+                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+                    Bestehendes Event verwalten
+                  </Typography>
+
+                  {loginError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {loginError}
+                    </Alert>
+                  )}
+
+                  <form onSubmit={handleLogin}>
+                    <TextField
+                      label="Event-ID"
+                      fullWidth
+                      variant="outlined"
+                      value={loginEventId}
+                      onChange={(e) => setLoginEventId(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      label="Admin Passwort"
+                      type="password"
+                      fullWidth
+                      variant="outlined"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      sx={{ mb: 3 }}
+                      required
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="secondary"
+                      fullWidth
+                      size="large"
+                      disabled={loginLoading}
+                    >
+                      {loginLoading ? <CircularProgress size={24} /> : "Als Admin einloggen"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </Grid>
-        </Container>
-      </AdminLayout>
-    </AdminRouteGuard>
+        </Grid>
+      </Container>
+    </AdminLayout>
   );
 }
