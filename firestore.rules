@@ -221,7 +221,7 @@ service cloud.firestore {
         allow write: if isAdmin(eventId) && (request.method == 'delete' || isValidRound(request.resource.data));
 
         match /detail/main {
-          allow read: if isEventMember(eventId) && getRound(eventId, roundId).status != 'INACTIVE';
+          allow read: if isAdmin(eventId) || (isEventMember(eventId) && getRound(eventId, roundId).status != 'INACTIVE');
           allow write: if isAdmin(eventId);
         }
 
@@ -230,7 +230,7 @@ service cloud.firestore {
           allow write: if isAdmin(eventId) && (request.method == 'delete' || isValidQuestion(request.resource.data));
 
           match /detail/main {
-            allow read: if isEventMember(eventId) && getQuestion(eventId, roundId, questionId).status == 'ACTIVE';
+            allow read: if isAdmin(eventId) || (isEventMember(eventId) && getQuestion(eventId, roundId, questionId).status == 'ACTIVE');
             allow write: if isAdmin(eventId);
           }
 
