@@ -1,11 +1,290 @@
 rules_version = '2';
 
-// M0 placeholder — deny-by-default.
-// Full rules will be implemented in M1.
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: events
+// Document ID: {eventId}
+// Fields:
+//   - name: string (required, 1-100 chars)
+//   - maxTeamSize: number (required, positive, <= 100)
+//   - status: string (required, 'INACTIVE' | 'ACTIVE')
+//
+// Collection: events/{eventId}/secret
+// Document ID: auth
+// Fields:
+//   - adminPasswordHash: string (required)
+//
+// Collection: events/{eventId}/teams
+// Document ID: {teamId}
+// Fields:
+//   - name: string (required, 1-50 chars)
+//   - memberNames: string (required, 0-500 chars)
+//   - createdAt: timestamp (required)
+//
+// Collection: events/{eventId}/teams/{teamId}/secret
+// Document ID: auth
+// Fields:
+//   - teamPasswordHash: string (required)
+//   - joinToken: string (required)
+//
+// Collection: events/{eventId}/rounds
+// Document ID: {roundId}
+// Fields:
+//   - number: number (required, positive)
+//   - title: string (required, 1-100 chars)
+//   - status: string (required, 'INACTIVE' | 'ACTIVE' | 'VALIDATION' | 'DONE')
+//
+// Collection: events/{eventId}/rounds/{roundId}/detail
+// Document ID: main
+// Fields:
+//   - description: string (required, 0-2000 chars)
+//
+// Collection: events/{eventId}/rounds/{roundId}/questions
+// Document ID: {questionId}
+// Fields:
+//   - number: number (required, positive)
+//   - type: string (required, 'MULTIPLE_CHOICE' | 'FREE_TEXT')
+//   - title: string (required, 1-100 chars)
+//   - status: string (required, 'INACTIVE' | 'ACTIVE')
+//
+// Collection: events/{eventId}/rounds/{roundId}/questions/{questionId}/detail
+// Document ID: main
+// Fields:
+//   - content: string (required, 0-2000 chars)
+//   - possibleAnswers: list of strings (optional, max 10 items, each 1-200 chars)
+//
+// Collection: events/{eventId}/rounds/{roundId}/questions/{questionId}/secret
+// Document ID: answer
+// Fields:
+//   - correctAnswer: string (required, 1-500 chars)
+//
+// Collection: events/{eventId}/answers
+// Document ID: {teamId}__{questionId}
+// Fields:
+//   - teamId: string (required)
+//   - roundId: string (required)
+//   - questionId: string (required)
+//   - answerText: string (required, 0-2000 chars)
+//   - submittedAt: timestamp (required)
+//   - points: number (required, >= 0)
+//   - validated: bool (required)
+//   - gradedAt: timestamp (optional)
+//
+// Collection: events/{eventId}/scoreboard
+// Document ID: {teamId}
+// Fields:
+//   - perRound: map (required, roundId -> number)
+//   - total: number (required)
+//   - updatedAt: timestamp (required)
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin(eventId) {
+      return isAuthenticated() && 
+             request.auth.token.role == 'admin' && 
+             request.auth.token.eventId == eventId;
+    }
+
+    function isTeam(eventId, teamId) {
+      return isAuthenticated() && 
+             request.auth.token.role == 'team' && 
+             request.auth.token.eventId == eventId && 
+             request.auth.token.teamId == teamId;
+    }
+
+    function isEventMember(eventId) {
+      return isAuthenticated() && 
+             request.auth.token.eventId == eventId;
+    }
+
+    function getRound(eventId, roundId) {
+      return get(/databases/$(database)/documents/events/$(eventId)/rounds/$(roundId)).data;
+    }
+
+    function getQuestion(eventId, roundId, questionId) {
+      return get(/databases/$(database)/documents/events/$(eventId)/rounds/$(roundId)/questions/$(questionId)).data;
+    }
+
+    // ===============================================================
+    // Validation Helpers
+    // ===============================================================
+    
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function isValidEvent(data) {
+      return hasRequiredFields(data, ['name', 'maxTeamSize', 'status']) &&
+             hasOnlyAllowedFields(data, ['name', 'maxTeamSize', 'status']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.maxTeamSize is number && data.maxTeamSize > 0 && data.maxTeamSize <= 100 &&
+             data.status in ['INACTIVE', 'ACTIVE'];
+    }
+
+    function isValidTeam(data) {
+      return hasRequiredFields(data, ['name', 'memberNames', 'createdAt']) &&
+             hasOnlyAllowedFields(data, ['name', 'memberNames', 'createdAt']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 50 &&
+             data.memberNames is string && data.memberNames.size() <= 500 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidRound(data) {
+      return hasRequiredFields(data, ['number', 'title', 'status']) &&
+             hasOnlyAllowedFields(data, ['number', 'title', 'status']) &&
+             data.number is number && data.number > 0 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.status in ['INACTIVE', 'ACTIVE', 'VALIDATION', 'DONE'];
+    }
+
+    function isValidQuestion(data) {
+      return hasRequiredFields(data, ['number', 'type', 'title', 'status']) &&
+             hasOnlyAllowedFields(data, ['number', 'type', 'title', 'status']) &&
+             data.number is number && data.number > 0 &&
+             data.type in ['MULTIPLE_CHOICE', 'FREE_TEXT'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.status in ['INACTIVE', 'ACTIVE'];
+    }
+
+    function isValidAnswer(data) {
+      return hasRequiredFields(data, ['teamId', 'roundId', 'questionId', 'answerText', 'submittedAt', 'points', 'validated']) &&
+             hasOnlyAllowedFields(data, ['teamId', 'roundId', 'questionId', 'answerText', 'submittedAt', 'points', 'validated', 'gradedAt']) &&
+             data.teamId is string &&
+             data.roundId is string &&
+             data.questionId is string &&
+             data.answerText is string && data.answerText.size() <= 2000 &&
+             data.submittedAt is timestamp &&
+             data.points is number && data.points >= 0 &&
+             data.validated is bool &&
+             (!('gradedAt' in data) || data.gradedAt is timestamp);
+    }
+
+    function isValidScoreboard(data) {
+      return hasRequiredFields(data, ['perRound', 'total', 'updatedAt']) &&
+             hasOnlyAllowedFields(data, ['perRound', 'total', 'updatedAt']) &&
+             data.perRound is map &&
+             data.total is number &&
+             data.updatedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules Definition
+    // ===============================================================
+
+    // Deny-by-default globally
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if isEventMember(eventId);
+      allow create: if isAuthenticated() && 
+                    !(request.auth.token.role == 'team' && request.auth.token.eventId == eventId) && 
+                    isValidEvent(request.resource.data);
+      allow update: if isAdmin(eventId) && isValidEvent(request.resource.data);
+      allow delete: if isAdmin(eventId);
+
+      match /secret/auth {
+        allow read, write: if false;
+      }
+
+      match /teams/{teamId} {
+        allow read: if isEventMember(eventId);
+        allow create: if isAuthenticated() && isValidTeam(request.resource.data);
+        allow update: if (isAdmin(eventId) || isTeam(eventId, teamId)) && isValidTeam(request.resource.data);
+        allow delete: if isAdmin(eventId);
+
+        match /secret/auth {
+          allow read, write: if false;
+        }
+      }
+
+      match /rounds/{roundId} {
+        allow read: if isEventMember(eventId);
+        allow write: if isAdmin(eventId) && (request.method == 'delete' || isValidRound(request.resource.data));
+
+        match /detail/main {
+          allow read: if isEventMember(eventId) && getRound(eventId, roundId).status != 'INACTIVE';
+          allow write: if isAdmin(eventId);
+        }
+
+        match /questions/{questionId} {
+          allow read: if isEventMember(eventId);
+          allow write: if isAdmin(eventId) && (request.method == 'delete' || isValidQuestion(request.resource.data));
+
+          match /detail/main {
+            allow read: if isEventMember(eventId) && getQuestion(eventId, roundId, questionId).status == 'ACTIVE';
+            allow write: if isAdmin(eventId);
+          }
+
+          match /secret/answer {
+            allow read, write: if isAdmin(eventId);
+          }
+        }
+      }
+
+      match /answers/{answerId} {
+        // Read is allowed for admins, or the specific team who owns this answer
+        allow read: if isEventMember(eventId) && (
+          isAdmin(eventId) || 
+          isTeam(eventId, resource.data.teamId)
+        );
+
+        // Write (create/update) rules:
+        allow create: if isEventMember(eventId) && (
+          isAdmin(eventId) || 
+          (
+            isTeam(eventId, request.resource.data.teamId) &&
+            isValidAnswer(request.resource.data) &&
+            request.resource.data.points == 0 &&
+            request.resource.data.validated == false &&
+            getQuestion(eventId, request.resource.data.roundId, request.resource.data.questionId).status == 'ACTIVE' &&
+            !(getRound(eventId, request.resource.data.roundId).status in ['VALIDATION', 'DONE', 'INACTIVE'])
+          )
+        );
+
+        allow update: if isEventMember(eventId) && (
+          isAdmin(eventId) || 
+          (
+            isTeam(eventId, resource.data.teamId) &&
+            isValidAnswer(request.resource.data) &&
+            // Prevent modifying grading fields
+            request.resource.data.points == resource.data.points &&
+            request.resource.data.validated == resource.data.validated &&
+            // Check immutable metadata fields
+            request.resource.data.teamId == resource.data.teamId &&
+            request.resource.data.roundId == resource.data.roundId &&
+            request.resource.data.questionId == resource.data.questionId &&
+            // Check that the question is active and round is active
+            getQuestion(eventId, resource.data.roundId, resource.data.questionId).status == 'ACTIVE' &&
+            !(getRound(eventId, resource.data.roundId).status in ['VALIDATION', 'DONE', 'INACTIVE'])
+          )
+        );
+
+        allow delete: if isAdmin(eventId);
+      }
+
+      match /scoreboard/{teamId} {
+        allow read: if isEventMember(eventId);
+        allow write: if isAdmin(eventId) && (request.method == 'delete' || isValidScoreboard(request.resource.data));
+      }
     }
   }
 }

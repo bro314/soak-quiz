@@ -287,3 +287,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 
 ### Environment PATH
 - Standard system tools (like `npm` and `gcloud`) are available in the user's homebrew/nvm/downloads folder structures. Explicitly prefix commands with `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$HOME/Downloads/google-cloud-sdk/bin:/opt/homebrew/bin:$PATH"` if commands fail to locate `node`, `npx` or `gcloud`.
+
+### Firestore Rules & Invariant 8 (from M1)
+- **Event Creation Access**: The security rules must allow event document creation by authenticated users who do not yet have a `'team'` role claim matching that specific `eventId`. If a user is logged in as a team for `eventId`, they are strictly denied from creating or overwriting `events/{eventId}`.
+- **Rules Testing**: When testing Firestore Security Rules with `@firebase/rules-unit-testing`, ensure the Firestore Emulator is running (e.g. `firebase emulators:start --only firestore`). Custom claims should be mocked in the test environment initialization (`testEnv.authenticatedContext(userId, tokenClaims)`).
