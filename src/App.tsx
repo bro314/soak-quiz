@@ -12,9 +12,13 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlin
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
 import QuizIcon from "@mui/icons-material/Quiz";
 
+import { Link, RouterProvider } from "react-router-dom";
+import { router } from "./routes";
+import Button from "@mui/material/Button";
+
 type ConnectionState = "connecting" | "connected" | "error";
 
-function App() {
+export default function App() {
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -36,6 +40,13 @@ function App() {
 
     return unsubscribe;
   }, []);
+
+  // When visiting the main path directly, render the splash / connection status page.
+  // When hitting admin or subpaths, RouterProvider handles rendering.
+  // Note: we can export a sub-component for the landing page or just render it inside App.
+  if (window.location.pathname !== "/") {
+    return <RouterProvider router={router} />;
+  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 6, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -147,16 +158,22 @@ function App() {
         </CardContent>
       </Card>
 
+      {connectionState === "connected" && (
+        <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
+          <Button component={Link} to="/admin" variant="contained" color="secondary">
+            Admin-Bereich
+          </Button>
+        </Box>
+      )}
+
       {/* Version Info */}
       <Typography
         variant="caption"
         color="text.secondary"
         sx={{ mt: 4, opacity: 0.5 }}
       >
-        M0 — Scaffold &amp; Firebase Setup
+        M3 — Admin Authoring &amp; Status Machine
       </Typography>
     </Container>
   );
 }
-
-export default App;

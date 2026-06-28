@@ -1,0 +1,541 @@
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { doc, onSnapshot, collection, setDoc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { AdminLayout } from "./components/AdminLayout";
+import { AdminRouteGuard } from "./components/AdminRouteGuard";
+import Container from "@mui/material/Container";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import Radio from "@mui/material/Radio";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import type { Round, Question, Team, Answer } from "../types";
+
+export function RoundEditor() {
+  const { eventId, roundId } = useParams<{ eventId: string; roundId: string }>();
+  const navigate = useNavigate();
+
+  // Data states
+  const [round, setRound] = useState<Round | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Edit Round fields
+  const [editNumber, setEditNumber] = useState(1);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStatus, setEditStatus] = useState<Round["status"]>("INACTIVE");
+  const [savingRound, setSavingRound] = useState(false);
+
+  // Create Question form state
+  const [questionTitle, setQuestionTitle] = useState("");
+  const [questionType, setQuestionType] = useState<Question["type"]>("MULTIPLE_CHOICE");
+  const [createQuestionLoading, setCreateQuestionLoading] = useState(false);
+
+  // Dialogs
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
+  useEffect(() => {
+    if (!eventId || !roundId) return;
+
+    setLoading(true);
+    // Listen to Round doc
+    const unsubRound = onSnapshot(doc(db, `events/${eventId}/rounds/${roundId}`), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as Omit<Round, "id">;
+        setRound({ id: snap.id, ...data } as Round);
+        setEditNumber(data.number);
+        setEditTitle(data.title);
+        setEditStatus(data.status);
+      } else {
+        setError("Runde nicht gefunden.");
+      }
+    });
+
+    // Listen to Round detail doc
+    const unsubDetail = onSnapshot(doc(db, `events/${eventId}/rounds/${roundId}/detail/main`), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setEditDescription(data?.description || "");
+      }
+    });
+
+    // Listen to Questions
+    const unsubQuestions = onSnapshot(collection(db, `events/${eventId}/rounds/${roundId}/questions`), (snap) => {
+      const list: Question[] = [];
+      snap.forEach((d) => {
+        const qData = d.data() as Omit<Question, "id">;
+        list.push({ id: d.id, ...qData } as Question);
+      });
+      list.sort((a, b) => a.number - b.number);
+      setQuestions(list);
+    });
+
+    // Listen to Teams
+    const unsubTeams = onSnapshot(collection(db, `events/${eventId}/teams`), (snap) => {
+      const list: Team[] = [];
+      snap.forEach((d) => {
+        const tData = d.data() as Omit<Team, "id">;
+        list.push({ id: d.id, ...tData } as Team);
+      });
+      setTeams(list);
+    });
+
+    // Listen to Answers of this event
+    const unsubAnswers = onSnapshot(collection(db, `events/${eventId}/answers`), (snap) => {
+      const list: Answer[] = [];
+      snap.forEach((d) => {
+        const ans = d.data() as Omit<Answer, "id">;
+        if (ans.roundId === roundId) {
+          list.push({ id: d.id, ...ans } as Answer);
+        }
+      });
+      setAnswers(list);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubRound();
+      unsubDetail();
+      unsubQuestions();
+      unsubTeams();
+      unsubAnswers();
+    };
+  }, [eventId, roundId]);
+
+  const handleSaveRound = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventId || !roundId) return;
+    setSavingRound(true);
+    try {
+      await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}`), {
+        number: editNumber,
+        title: editTitle,
+        status: editStatus,
+      });
+      await setDoc(doc(db, `events/${eventId}/rounds/${roundId}/detail/main`), {
+        description: editDescription,
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert("Fehler beim Speichern: " + err.message);
+    } finally {
+      setSavingRound(false);
+    }
+  };
+
+  const handleCreateQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventId || !roundId || !questionTitle) return;
+    setCreateQuestionLoading(true);
+    try {
+      // Find smallest unused integer >= 1
+      const numbers = questions.map((q) => q.number);
+      let nextNumber = 1;
+      while (numbers.includes(nextNumber)) {
+        nextNumber++;
+      }
+
+      const questionId = `question-${nextNumber}`;
+      const qRef = doc(db, `events/${eventId}/rounds/${roundId}/questions/${questionId}`);
+      const detailRef = doc(db, `events/${eventId}/rounds/${roundId}/questions/${questionId}/detail/main`);
+      const secretRef = doc(db, `events/${eventId}/rounds/${roundId}/questions/${questionId}/secret/answer`);
+
+      await setDoc(qRef, {
+        number: nextNumber,
+        type: questionType,
+        title: questionTitle,
+        status: "INACTIVE",
+      });
+
+      await setDoc(detailRef, {
+        content: "",
+        possibleAnswers: questionType === "MULTIPLE_CHOICE" ? ["", "", "", ""] : [],
+      });
+
+      await setDoc(secretRef, {
+        correctAnswer: "",
+      });
+
+      setQuestionTitle("");
+    } catch (err: any) {
+      console.error(err);
+      alert("Fehler beim Erstellen der Frage: " + err.message);
+    } finally {
+      setCreateQuestionLoading(false);
+    }
+  };
+
+  const handleDeleteRound = async () => {
+    if (!eventId || !roundId) return;
+    setOpenDeleteDialog(false);
+    try {
+      // Delete questions under round first (standard firestore client requires manual subcollection delete if not functions)
+      const qSnaps = await getDocs(collection(db, `events/${eventId}/rounds/${roundId}/questions`));
+      for (const qDoc of qSnaps.docs) {
+        await deleteDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${qDoc.id}/detail/main`));
+        await deleteDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${qDoc.id}/secret/answer`));
+        await deleteDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${qDoc.id}`));
+      }
+
+      await deleteDoc(doc(db, `events/${eventId}/rounds/${roundId}/detail/main`));
+      await deleteDoc(doc(db, `events/${eventId}/rounds/${roundId}`));
+      navigate(`/admin/event/${eventId}`);
+    } catch (err: any) {
+      console.error(err);
+      alert("Fehler beim Löschen: " + err.message);
+    }
+  };
+
+  const handleToggleQuestionStatus = async (q: Question) => {
+    if (!eventId || !roundId) return;
+    const newStatus: Question["status"] = q.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    try {
+      await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${q.id}`), {
+        status: newStatus,
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminRouteGuard>
+        <AdminLayout>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+            <CircularProgress />
+          </Box>
+        </AdminLayout>
+      </AdminRouteGuard>
+    );
+  }
+
+  if (error || !round) {
+    return (
+      <AdminRouteGuard>
+        <AdminLayout>
+          <Alert severity="error">{error || "Runde nicht geladen."}</Alert>
+        </AdminLayout>
+      </AdminRouteGuard>
+    );
+  }
+
+  // Create a mapping of teamId__questionId to Answer for easier score mapping
+  const answerMap = new Map<string, Answer>(
+    answers.map((a) => [`${a.teamId}__${a.questionId}`, a])
+  );
+
+  return (
+    <AdminRouteGuard>
+      <AdminLayout>
+        <Container maxWidth="xl">
+          <Button
+            component={Link}
+            to={`/admin/event/${eventId}`}
+            startIcon={<ArrowBackIcon />}
+            sx={{ mb: 3 }}
+          >
+            Zurück zum Dashboard
+          </Button>
+
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4, flexWrap: "wrap", gap: 2 }}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
+              Runde {round.number}: {round.title}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setOpenDeleteDialog(true)}
+              >
+                Runde löschen
+              </Button>
+            </Box>
+          </Box>
+
+          <Grid container spacing={4}>
+            {/* Round Settings Form */}
+            <Grid size={{ xs: 12, md: 5 }}>
+              <Card className="glass" sx={{ p: 2, mb: 4 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                    Rundendetails bearbeiten
+                  </Typography>
+                  <form onSubmit={handleSaveRound}>
+                    <TextField
+                      label="Rundennummer"
+                      type="number"
+                      fullWidth
+                      variant="outlined"
+                      value={editNumber}
+                      onChange={(e) => setEditNumber(Number(e.target.value))}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      label="Titel"
+                      fullWidth
+                      variant="outlined"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      label="Beschreibung"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      variant="outlined"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      sx={{ mb: 2 }}
+                    />
+                    <TextField
+                      label="Rundenstatus"
+                      select
+                      fullWidth
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as Round["status"])}
+                      slotProps={{
+                        select: {
+                          native: true,
+                        },
+                      }}
+                      sx={{ mb: 3 }}
+                    >
+                      <option value="INACTIVE">Inaktiv (INACTIVE)</option>
+                      <option value="ACTIVE">Aktiv (ACTIVE)</option>
+                      <option value="VALIDATION">Validierung (VALIDATION)</option>
+                      <option value="DONE">Beendet (DONE)</option>
+                    </TextField>
+
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      disabled={savingRound}
+                    >
+                      {savingRound ? <CircularProgress size={24} /> : "Runde speichern"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Create Question Card */}
+              <Card className="glass" sx={{ p: 2 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                    Frage hinzufügen
+                  </Typography>
+                  <form onSubmit={handleCreateQuestion}>
+                    <TextField
+                      label="Frage-Titel"
+                      fullWidth
+                      variant="outlined"
+                      value={questionTitle}
+                      onChange={(e) => setQuestionTitle(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Fragentyp:
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Radio
+                            checked={questionType === "MULTIPLE_CHOICE"}
+                            onChange={() => setQuestionType("MULTIPLE_CHOICE")}
+                          />
+                        }
+                        label="Multiple Choice"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Radio
+                            checked={questionType === "FREE_TEXT"}
+                            onChange={() => setQuestionType("FREE_TEXT")}
+                          />
+                        }
+                        label="Freitext (Normalisiert)"
+                      />
+                    </Box>
+
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      startIcon={<AddIcon />}
+                      disabled={createQuestionLoading}
+                    >
+                      Frage erstellen
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Questions list */}
+            <Grid size={{ xs: 12, md: 7 }}>
+              <Card className="glass" sx={{ p: 2, mb: 4 }}>
+                <CardContent>
+                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+                    Fragen in dieser Runde
+                  </Typography>
+                  {questions.length === 0 ? (
+                    <Typography color="text.secondary">Noch keine Fragen angelegt.</Typography>
+                  ) : (
+                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Nr.</TableCell>
+                            <TableCell>Titel</TableCell>
+                            <TableCell>Typ</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Aktionen</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {questions.map((q) => (
+                            <TableRow key={q.id}>
+                              <TableCell>{q.number}</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>{q.title}</TableCell>
+                              <TableCell>
+                                <Chip label={q.type} size="small" />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outlined"
+                                  color={q.status === "ACTIVE" ? "success" : "inherit"}
+                                  size="small"
+                                  onClick={() => handleToggleQuestionStatus(q)}
+                                >
+                                  {q.status === "ACTIVE" ? "Aktiv" : "Inaktiv"}
+                                </Button>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Button
+                                  component={Link}
+                                  to={`/admin/event/${eventId}/round/${roundId}/question/${q.id}`}
+                                  variant="contained"
+                                  size="small"
+                                  startIcon={<EditIcon />}
+                                >
+                                  Bearbeiten
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Round Score Table */}
+              <Card className="glass" sx={{ p: 2 }}>
+                <CardContent>
+                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+                    Spielstand für Runde {round.number}
+                  </Typography>
+                  {teams.length === 0 ? (
+                    <Typography color="text.secondary">Noch keine Teams registriert.</Typography>
+                  ) : (
+                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 700 }}>Team Name</TableCell>
+                            {questions.map((q) => (
+                              <TableCell key={q.id} align="right" sx={{ fontWeight: 700 }}>
+                                F{q.number}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {teams.map((team) => (
+                            <TableRow key={team.id}>
+                              <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
+                                {team.name}
+                              </TableCell>
+                              {questions.map((q) => {
+                                const ans = answerMap.get(`${team.id}__${q.id}`);
+                                return (
+                                  <TableCell key={q.id} align="right">
+                                    {ans ? (
+                                      <Chip
+                                        label={ans.points}
+                                        size="small"
+                                        color={ans.validated ? "success" : "warning"}
+                                        variant="outlined"
+                                      />
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+
+        {/* Delete Dialog */}
+        <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
+          <DialogTitle sx={{ fontWeight: 700 }}>Runde löschen?</DialogTitle>
+          <DialogContent>
+            Sicher, dass du diese Runde und all ihre Fragen löschen möchtest? Das kann nicht rückgängig gemacht werden.
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDeleteDialog(false)}>Abbrechen</Button>
+            <Button onClick={handleDeleteRound} color="error" variant="contained">
+              Löschen
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </AdminLayout>
+    </AdminRouteGuard>
+  );
+}

@@ -242,7 +242,7 @@ Build each screen to match the spec exactly. Status names below are the English 
 *Done when:* claims are set correctly and rules now enforce per-identity access in tests.
 
 **M3 — Admin authoring & status machine.** Admin home, event dashboard, round/question editors, number auto-assign, all status-transition actions + reset (with confirmation).
-*Done when:* an admin can author a complete event and drive every status transition; illegal transitions are rejected.
+*Done when:* an admin can author a complete event and drive every status transition; illegal transitions are rejected. *(Status: Done)*
 
 **M4 — Grading & aggregation (F2).** Trigger function: MC auto-grade, free-text normalize+suggest, scoreboard maintenance, auto `VALIDATION→DONE`.
 *Done when:* submitting answers yields correct points + scoreboard; correct answers never leave the server to a participant.

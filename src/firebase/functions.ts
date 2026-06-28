@@ -14,6 +14,17 @@ export interface CreateTeamResponse {
   joinToken: string;
 }
 
+export interface CreateEventRequest {
+  eventId: string;
+  name: string;
+  maxTeamSize: number;
+  adminPassword?: string;
+}
+
+export interface CreateEventResponse {
+  status: string;
+}
+
 export interface LoginTeamRequest {
   eventId: string;
   teamId: string;
@@ -34,6 +45,11 @@ export interface LoginAdminRequest {
 export interface AuthFunctionResponse {
   status: string;
 }
+
+export const createEventCallable = httpsCallable<CreateEventRequest, CreateEventResponse>(
+  functions,
+  "createEvent"
+);
 
 export const createTeamCallable = httpsCallable<CreateTeamRequest, CreateTeamResponse>(
   functions,

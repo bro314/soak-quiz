@@ -31,6 +31,51 @@ export const healthCheck = onRequest(
   }
 );
 
+// New callable: createEvent(eventId, name, maxTeamSize, adminPassword)
+export const createEvent = onCall({ region: "europe-west1" }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be logged in anonymously first.");
+  }
+
+  const { eventId, name, maxTeamSize, adminPassword } = request.data || {};
+  if (!eventId || !name || !adminPassword) {
+    throw new HttpsError("invalid-argument", "Missing eventId, name, or adminPassword.");
+  }
+
+  const size = maxTeamSize ? Number(maxTeamSize) : 6;
+  if (isNaN(size) || size <= 0 || size > 100) {
+    throw new HttpsError("invalid-argument", "maxTeamSize must be between 1 and 100.");
+  }
+
+  const eventRef = db.doc(`events/${eventId}`);
+  const authRef = db.doc(`events/${eventId}/secret/auth`);
+
+  await db.runTransaction(async (transaction) => {
+    const existingEvent = await transaction.get(eventRef);
+    if (existingEvent.exists) {
+      throw new HttpsError("already-exists", `Event with ID "${eventId}" already exists.`);
+    }
+
+    transaction.set(eventRef, {
+      name,
+      maxTeamSize: size,
+      status: "INACTIVE",
+    });
+
+    transaction.set(authRef, {
+      adminPasswordHash: hashPassword(adminPassword),
+    });
+  });
+
+  // Set custom claim for admin of this event immediately
+  await auth.setCustomUserClaims(request.auth.uid, {
+    role: "admin",
+    eventId,
+  });
+
+  return { status: "success" };
+});
+
 // F1: createTeam(eventId, name, password, memberNames)
 export const createTeam = onCall({ region: "europe-west1" }, async (request) => {
   if (!request.auth) {
