@@ -34,7 +34,7 @@ import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
-import type { Event, Round, Team, Scoreboard } from "../types";
+import type { Event, Round, Team, Scoreboard, Question } from "../types";
 
 export function EventDashboard() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -45,6 +45,8 @@ export function EventDashboard() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [scoreboards, setScoreboards] = useState<Scoreboard[]>([]);
+  const [activeRoundQuestions, setActiveRoundQuestions] = useState<Question[]>([]);
+  const [questionCounts, setQuestionCounts] = useState<{ [roundId: string]: number }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -113,6 +115,51 @@ export function EventDashboard() {
       unsubScores();
     };
   }, [eventId]);
+
+  // Listen to active round questions
+  useEffect(() => {
+    if (!eventId) return;
+    const activeRound = rounds.find((r) => r.status === "ACTIVE");
+    if (!activeRound) {
+      setActiveRoundQuestions([]);
+      return;
+    }
+
+    const unsubQuestions = onSnapshot(
+      collection(db, `events/${eventId}/rounds/${activeRound.id}/questions`),
+      (snap) => {
+        const list: Question[] = [];
+        snap.forEach((d) => {
+          list.push({ id: d.id, ...d.data() } as Question);
+        });
+        list.sort((a, b) => a.number - b.number);
+        setActiveRoundQuestions(list);
+      }
+    );
+
+    return () => {
+      unsubQuestions();
+    };
+  }, [eventId, rounds]);
+
+  // Listen to question counts for all rounds
+  useEffect(() => {
+    if (!eventId || rounds.length === 0) return;
+
+    const unsubscribers = rounds.map((r) => {
+      const qRef = collection(db, `events/${eventId}/rounds/${r.id}/questions`);
+      return onSnapshot(qRef, (snap) => {
+        setQuestionCounts((prev) => ({
+          ...prev,
+          [r.id]: snap.size,
+        }));
+      });
+    });
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [eventId, rounds]);
 
   const handleUpdateEventStatus = async (status: Event["status"]) => {
     if (!eventId || !event) return;
@@ -214,6 +261,24 @@ export function EventDashboard() {
     }
   };
 
+  const handleStartNextQuestion = async () => {
+    const activeRound = rounds.find((r) => r.status === "ACTIVE");
+    if (!eventId || !activeRound) return;
+    const nextQuestion = activeRoundQuestions.find((q) => q.status === "INACTIVE");
+    if (!nextQuestion) {
+      setSnackbar({ open: true, message: "Keine inaktiven Fragen mehr vorhanden.", severity: "warning" });
+      return;
+    }
+    try {
+      await updateDoc(doc(db, `events/${eventId}/rounds/${activeRound.id}/questions/${nextQuestion.id}`), {
+        status: "ACTIVE",
+      });
+    } catch (err: any) {
+      console.error(err);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
+    }
+  };
+
   const handleCompleteValidation = async () => {
     if (!eventId) return;
     const validationRound = rounds.find((r) => r.status === "VALIDATION");
@@ -287,6 +352,10 @@ export function EventDashboard() {
   // Compute scoreboard metrics
   const scoreboardMap = new Map(scoreboards.map((s) => [s.teamId, s]));
 
+  const nextRound = rounds.find((r) => r.status === "INACTIVE");
+  const activeRound = rounds.find((r) => r.status === "ACTIVE");
+  const nextQuestion = activeRoundQuestions.find((q) => q.status === "INACTIVE");
+
   return (
     <AdminRouteGuard>
       <AdminLayout>
@@ -316,9 +385,10 @@ export function EventDashboard() {
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
                 Event Steuerung
               </Typography>
-              <Grid container spacing={2}>
+              {/* First row: Event starten/stoppen. Event zurücksetzen. */}
+              <Grid container spacing={2} sx={{ mb: 2 }}>
                 {event.status === "INACTIVE" ? (
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Button
                       variant="contained"
                       color="success"
@@ -330,7 +400,7 @@ export function EventDashboard() {
                     </Button>
                   </Grid>
                 ) : (
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Button
                       variant="outlined"
                       color="warning"
@@ -343,7 +413,22 @@ export function EventDashboard() {
                   </Grid>
                 )}
 
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    fullWidth
+                    startIcon={<RotateLeftIcon />}
+                    onClick={() => setOpenResetDialog(true)}
+                  >
+                    Event zurücksetzen
+                  </Button>
+                </Grid>
+              </Grid>
+
+              {/* Second row: Nächste Runde starten, Nächste Frage starten, Aktuelle Runde schließen */}
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Button
                     variant="contained"
                     color="primary"
@@ -351,26 +436,66 @@ export function EventDashboard() {
                     startIcon={<SkipNextIcon />}
                     onClick={handleStartNextRound}
                     disabled={event.status !== "ACTIVE" || rounds.some((r) => r.status === "ACTIVE")}
+                    sx={{ textAlign: "center" }}
                   >
-                    Nächste Runde starten
+                    {nextRound ? (
+                      <>
+                        Nächste Runde starten
+                        <br />
+                        (Runde {nextRound.number}: {nextRound.title})
+                      </>
+                    ) : (
+                      "Nächste Runde starten"
+                    )}
                   </Button>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    fullWidth
+                    startIcon={<PlayArrowIcon />}
+                    onClick={handleStartNextQuestion}
+                    disabled={event.status !== "ACTIVE" || !nextQuestion}
+                    sx={{ textAlign: "center" }}
+                  >
+                    {nextQuestion ? (
+                      <>
+                        Nächste Frage starten
+                        <br />
+                        (Frage {nextQuestion.number}: {nextQuestion.title})
+                      </>
+                    ) : (
+                      "Nächste Frage starten"
+                    )}
+                  </Button>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Button
                     variant="contained"
                     color="warning"
                     fullWidth
                     startIcon={<CloseIcon />}
                     onClick={handleCloseCurrentRound}
-                    disabled={event.status !== "ACTIVE"}
+                    disabled={event.status !== "ACTIVE" || !activeRound}
+                    sx={{ textAlign: "center" }}
                   >
-                    Aktuelle Runde schließen
+                    {activeRound ? (
+                      <>
+                        Aktuelle Runde schließen
+                        <br />
+                        (Runde {activeRound.number}: {activeRound.title})
+                      </>
+                    ) : (
+                      "Aktuelle Runde schließen"
+                    )}
                   </Button>
                 </Grid>
 
                 {rounds.some((r) => r.status === "VALIDATION") && (
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, md: 12 }}>
                     <Button
                       variant="contained"
                       color="success"
@@ -383,29 +508,110 @@ export function EventDashboard() {
                     </Button>
                   </Grid>
                 )}
-
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    fullWidth
-                    startIcon={<RotateLeftIcon />}
-                    onClick={() => setOpenResetDialog(true)}
-                  >
-                    Event zurücksetzen
-                  </Button>
-                </Grid>
               </Grid>
             </CardContent>
           </Card>
 
+          {/* Rundenliste and Runde hinzufügen next to each other */}
+          <Grid container spacing={4} sx={{ mb: 4 }}>
+            {/* Rundenliste */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card className="glass" sx={{ p: 2, height: "100%" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                    Rundenliste
+                  </Typography>
+                  {rounds.length === 0 ? (
+                    <Typography color="text.secondary">Noch keine Runden angelegt.</Typography>
+                  ) : (
+                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Nr.</TableCell>
+                            <TableCell>Titel</TableCell>
+                            <TableCell>Fragen</TableCell>
+                            <TableCell>Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {rounds.map((r) => (
+                             <TableRow
+                               key={r.id}
+                               hover
+                               sx={{ cursor: "pointer" }}
+                               onClick={() => navigate(`/admin/event/${eventId}/round/${r.id}`)}
+                             >
+                               <TableCell>{r.number}</TableCell>
+                               <TableCell style={{ fontWeight: 600 }}>
+                                 {r.title}
+                               </TableCell>
+                               <TableCell>
+                                 {questionCounts[r.id] ?? 0}
+                               </TableCell>
+                               <TableCell>
+                                 <Chip label={r.status} size="small" variant="outlined" color={r.status === "ACTIVE" ? "success" : r.status === "VALIDATION" ? "warning" : "default"} />
+                               </TableCell>
+                             </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Creation Form */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card className="glass" sx={{ p: 2, height: "100%" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                    Runde hinzufügen
+                  </Typography>
+                  <form onSubmit={handleCreateRound}>
+                    <TextField
+                      label="Titel der Runde"
+                      fullWidth
+                      variant="outlined"
+                      value={roundTitle}
+                      onChange={(e) => setRoundTitle(e.target.value)}
+                      sx={{ mb: 2 }}
+                      required
+                    />
+                    <TextField
+                      label="Beschreibung (optional)"
+                      fullWidth
+                      multiline
+                      rows={2}
+                      variant="outlined"
+                      value={roundDescription}
+                      onChange={(e) => setRoundDescription(e.target.value)}
+                      sx={{ mb: 3 }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      startIcon={<AddIcon />}
+                      disabled={createRoundLoading}
+                    >
+                      Runde erstellen
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Scoreboard table */}
           <Grid container spacing={4}>
-            {/* Scoreboard table */}
-            <Grid size={{ xs: 12, lg: 8 }}>
+            <Grid size={{ xs: 12 }}>
               <Card className="glass" sx={{ p: 2, mb: 4 }}>
                 <CardContent>
                   <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-                    Gesamter Spielstand
+                    Spielstand
                   </Typography>
 
                   {teams.length === 0 ? (
@@ -468,91 +674,6 @@ export function EventDashboard() {
                               }, 0)}
                             </TableCell>
                           </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Rounds List & Creation */}
-            <Grid size={{ xs: 12, lg: 4 }}>
-              {/* Creation Form */}
-              <Card className="glass" sx={{ p: 2, mb: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
-                    Runde hinzufügen
-                  </Typography>
-                  <form onSubmit={handleCreateRound}>
-                    <TextField
-                      label="Titel der Runde"
-                      fullWidth
-                      variant="outlined"
-                      value={roundTitle}
-                      onChange={(e) => setRoundTitle(e.target.value)}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Beschreibung (optional)"
-                      fullWidth
-                      multiline
-                      rows={2}
-                      variant="outlined"
-                      value={roundDescription}
-                      onChange={(e) => setRoundDescription(e.target.value)}
-                      sx={{ mb: 3 }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      startIcon={<AddIcon />}
-                      disabled={createRoundLoading}
-                    >
-                      Runde erstellen
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              {/* Rounds List */}
-              <Card className="glass" sx={{ p: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
-                    Rundenliste
-                  </Typography>
-                  {rounds.length === 0 ? (
-                    <Typography color="text.secondary">Noch keine Runden angelegt.</Typography>
-                  ) : (
-                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Nr.</TableCell>
-                            <TableCell>Titel</TableCell>
-                            <TableCell>Status</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {rounds.map((r) => (
-                             <TableRow
-                               key={r.id}
-                               hover
-                               sx={{ cursor: "pointer" }}
-                               onClick={() => navigate(`/admin/event/${eventId}/round/${r.id}`)}
-                             >
-                               <TableCell>{r.number}</TableCell>
-                               <TableCell style={{ fontWeight: 600 }}>
-                                 {r.title}
-                               </TableCell>
-                               <TableCell>
-                                 <Chip label={r.status} size="small" variant="outlined" color={r.status === "ACTIVE" ? "success" : r.status === "VALIDATION" ? "warning" : "default"} />
-                               </TableCell>
-                             </TableRow>
-                          ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
