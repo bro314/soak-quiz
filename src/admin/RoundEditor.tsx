@@ -204,6 +204,7 @@ export function RoundEditor() {
       });
 
       setQuestionTitle("");
+      navigate(`/admin/event/${eventId}/round/${roundId}/question/${questionId}`);
     } catch (err: any) {
       console.error(err);
       setSnackbar({ open: true, message: "Fehler beim Erstellen der Frage: " + err.message, severity: "error" });

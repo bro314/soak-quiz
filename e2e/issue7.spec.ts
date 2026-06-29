@@ -28,20 +28,13 @@ test.describe('Issue 7: Points are already shown although round is not closed', 
     const roundTitleInput = adminPage.locator('label:has-text("Titel der Runde") + div input');
     await roundTitleInput.fill('Round 1');
     await adminPage.click('button:has-text("Runde erstellen")');
-    await expect(adminPage.locator('table >> text="Round 1"')).toBeVisible();
-
-    // Go to Round 1 Editor to add Questions
-    await adminPage.click('table >> text="Round 1"');
     await expect(adminPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // Add Question 1 (Multiple Choice)
     const questionTitleInput = adminPage.locator('label:has-text("Frage-Titel") + div input');
     await questionTitleInput.fill('Q1 MC');
     await adminPage.click('button:has-text("Frage erstellen")');
-    await expect(adminPage.locator('text=Q1 MC')).toBeVisible();
-
     // Configure Question 1 (MC)
-    await adminPage.locator('tr:has-text("Q1 MC")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Option 1") + div input', 'Choice A');
     await adminPage.fill('label:has-text("Option 2") + div input', 'Choice B');

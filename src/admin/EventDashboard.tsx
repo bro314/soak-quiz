@@ -199,6 +199,7 @@ export function EventDashboard() {
 
       setRoundTitle("");
       setRoundDescription("");
+      navigate(`/admin/event/${eventId}/round/${roundId}`);
     } catch (err: any) {
       console.error(err);
       setSnackbar({ open: true, message: "Fehler beim Erstellen der Runde: " + err.message, severity: "error" });

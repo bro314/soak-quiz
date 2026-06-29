@@ -28,10 +28,6 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
     const roundTitleInput = adminPage.locator('label:has-text("Titel der Runde") + div input');
     await roundTitleInput.fill('Round 1');
     await adminPage.click('button:has-text("Runde erstellen")');
-    await expect(adminPage.locator('table >> text="Round 1"')).toBeVisible();
-
-    // Go to Round 1 Editor to add Questions
-    await adminPage.click('table >> text="Round 1"');
     await expect(adminPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // Add Question 1 (Free Text)
@@ -39,10 +35,7 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
     await questionTitleInput.fill('Q1 Free Text');
     await adminPage.click('text="Freitext (Normalisiert)"');
     await adminPage.click('button:has-text("Frage erstellen")');
-    await expect(adminPage.locator('text=Q1 Free Text')).toBeVisible();
-
     // Configure Question 1 (Free Text)
-    await adminPage.locator('tr:has-text("Q1 Free Text")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Richtige Antwort") + div input', 'correct answer');
     await adminPage.click('button:has-text("Frage speichern")');

@@ -38,14 +38,18 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.fill('label:has-text("Beschreibung (optional)") + div textarea', 'This is Round 1 description');
     await expect(roundTitleInput).toHaveValue('Round 1');
     await adminPage.click('button:has-text("Runde erstellen")');
+    await adminPage.click('text="Zurück zum Dashboard"');
     await expect(adminPage.locator('table >> text="Round 1"')).toBeVisible();
-    await expect(roundTitleInput).toHaveValue('');
 
     // 6. Admin: Add Round 2
-    await roundTitleInput.fill('Round 2');
+    const roundTitleInput2 = adminPage.locator('label:has-text("Titel der Runde") + div input');
+    await expect(roundTitleInput2).toBeVisible();
+    await expect(roundTitleInput2).toHaveValue('');
+    await roundTitleInput2.fill('Round 2');
     await adminPage.fill('label:has-text("Beschreibung (optional)") + div textarea', 'This is Round 2 description');
-    await expect(roundTitleInput).toHaveValue('Round 2');
+    await expect(roundTitleInput2).toHaveValue('Round 2');
     await adminPage.click('button:has-text("Runde erstellen")');
+    await adminPage.click('text="Zurück zum Dashboard"');
     await expect(adminPage.locator('table >> text="Round 2"')).toBeVisible();
 
     // 7. Admin: Go to Round 1 Editor to add Questions
@@ -56,18 +60,8 @@ test.describe('SoAk Quiz App E2E', () => {
     const questionTitleInput = adminPage.locator('label:has-text("Frage-Titel") + div input');
     await questionTitleInput.fill('Q1 MC');
     await adminPage.click('button:has-text("Frage erstellen")');
-    await expect(adminPage.locator('text=Q1 MC')).toBeVisible();
-    await expect(questionTitleInput).toHaveValue('');
-
-    // 9. Admin: Add Question 2 (Free Text)
-    await questionTitleInput.fill('Q2 FT');
-    await adminPage.click('text="Freitext (Normalisiert)"');
-    await expect(questionTitleInput).toHaveValue('Q2 FT');
-    await adminPage.click('button:has-text("Frage erstellen")');
-    await expect(adminPage.locator('text=Q2 FT')).toBeVisible();
 
     // 10. Admin: Configure Question 1 (MC)
-    await adminPage.locator('tr:has-text("Q1 MC")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Option 1") + div input', 'Choice A');
     await adminPage.fill('label:has-text("Option 2") + div input', 'Choice B');
@@ -77,8 +71,15 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.click('button:has-text("Frage speichern")');
     await adminPage.click('text="Zurück zur Runde"');
 
+    // 9. Admin: Add Question 2 (Free Text)
+    const titleInput2 = adminPage.locator('label:has-text("Frage-Titel") + div input');
+    await expect(titleInput2).toBeVisible();
+    await expect(titleInput2).toHaveValue('');
+    await titleInput2.fill('Q2 FT');
+    await adminPage.click('text="Freitext (Normalisiert)"');
+    await adminPage.click('button:has-text("Frage erstellen")');
+
     // 11. Admin: Configure Question 2 (FT)
-    await adminPage.locator('tr:has-text("Q2 FT")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 2 bearbeiten');
     await adminPage.fill('label:has-text("Richtige Antwort") + div input', 'Munich');
     await adminPage.click('button:has-text("Frage speichern")');

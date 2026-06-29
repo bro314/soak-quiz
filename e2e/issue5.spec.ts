@@ -23,13 +23,16 @@ test.describe('Issue 5 Reproduction', () => {
     const roundTitleInput = page.locator('label:has-text("Titel der Runde") + div input');
     await roundTitleInput.fill('Round 1');
     await page.click('button:has-text("Runde erstellen")');
+    await page.click('text="Zurück zum Dashboard"');
     await expect(page.locator('table >> text="Round 1"')).toBeVisible();
 
     // Create Round 2
-    // Wait for the title input to be cleared first
-    await expect(roundTitleInput).toHaveValue('');
-    await roundTitleInput.fill('Round 2');
+    const roundTitleInput2 = page.locator('label:has-text("Titel der Runde") + div input');
+    await expect(roundTitleInput2).toBeVisible();
+    await expect(roundTitleInput2).toHaveValue('');
+    await roundTitleInput2.fill('Round 2');
     await page.click('button:has-text("Runde erstellen")');
+    await page.click('text="Zurück zum Dashboard"');
     await expect(page.locator('table >> text="Round 2"')).toBeVisible();
 
     // Start event

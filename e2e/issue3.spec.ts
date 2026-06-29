@@ -23,6 +23,7 @@ test.describe('Issue 3 Reproduction', () => {
     const roundTitleInput = page.locator('label:has-text("Titel der Runde") + div input');
     await roundTitleInput.fill('Round 1');
     await page.click('button:has-text("Runde erstellen")');
+    await page.click('text="Zurück zum Dashboard"');
     await expect(page.locator('table >> text="Round 1"')).toBeVisible();
 
     // Now try to click the number cell instead of the title link to navigate
