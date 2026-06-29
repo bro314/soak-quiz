@@ -113,15 +113,19 @@ npm run db:seed
 
 ## 🧪 Testing
 
-The test suite validates security rules, database triggers, and callable authentication methods.
+The test suite validates security rules, database triggers, callable authentication methods, and complete end-to-end browser flows.
 
 ```bash
-# Run tests against the local emulators:
+# Run unit and integration tests against local emulators:
 npm run test:rules
+
+# Run Playwright End-to-End (E2E) browser tests:
+npx playwright test
 ```
 
 > [!NOTE]
-> Since rules tests frequently clear database states, tests must be run sequentially. Vitest is configured to run tests with `--fileParallelism=false` in the script wrapper to prevent test collisions.
+> - **Vitest Integration Tests**: Since rules tests frequently clear database states, tests must be run sequentially. Vitest is configured to run tests with `--fileParallelism=false` in the script wrapper to prevent test collisions.
+> - **Playwright E2E Tests**: Playwright runs a complete, multi-user simulation (Admin creating event/rounds/questions, Team A and Team B registering, answering questions, Admin validating, and scoreboard updating). Playwright's `webServer` automatically starts the Vite app and Firebase Emulators.
 
 ---
 
@@ -135,12 +139,12 @@ npm run build
 Deploy services to Firebase:
 ```bash
 # Deploy all assets (Firestore rules, indexes, Functions, Hosting)
-firebase deploy
+npx -y firebase-tools deploy
 
-# Deploy individual services
-firebase deploy --only hosting
-firebase deploy --only functions
-firebase deploy --only firestore:rules
+# Deploy individual services using firebase-tools
+npx -y firebase-tools deploy --only hosting
+npx -y firebase-tools deploy --only functions
+npx -y firebase-tools deploy --only firestore:rules
 ```
 
 ---
@@ -152,6 +156,7 @@ For AI coding agents modifying or adding features:
 ### 🔒 Security & Rules Invariants
 - **Answer Secrecy**: Correct answers must never be accessible on the client side. Keep correct answers under `/secret/answer` path and ensure read access is restricted to `admin` role custom claims only.
 - **Write Limits**: Teams must never write to scoreboard documents, modify `validated` or `points` on answers, or overwrite documents outside their owned `teamId`.
+- **Rules Null Safety**: When client-side `onSnapshot` queries listen to non-existent documents (e.g. before answers are submitted), Firestore rules must use `resource == null || ...` safe guards to avoid null pointer exceptions (`Null value error`) that crash snapshot listeners.
 
 ### ⚡ MUI v9 Specifics
 - **Icon Suffixes**: MUI v9 uses `Outlined` suffix in imports rather than base names for outlines. For example, use `CheckCircleOutlineOutlined` and `ErrorOutlineOutlined`. Importing legacy names will break the production bundler.
@@ -160,3 +165,7 @@ For AI coding agents modifying or adding features:
 ### 🧪 Vitest & Emulator Workarounds
 - **ESM Import Hoisting**: Vitest hosts import statements at the top of test files, executing them before inline environment variables (like `process.env.FIRESTORE_EMULATOR_HOST`) are set. Ensure dynamic `await import(...)` is used within `beforeAll()` blocks for SDK initialization in tests.
 - **Auth User Cache**: Client-side Firebase Auth persists active anonymous user sessions. Explicitly call `signOut(auth)` first in integration tests representing multiple new team logins.
+
+### 🌐 Playwright E2E Gotchas & Invariants
+- **Vite Watch Ignored Paths**: Playwright writes test trace/results to `test-results/`. Vite is configured in [vite.config.ts](file:///Users/brohlfs/git/soak-quiz/vite.config.ts) and `.gitignore` to ignore this directory, preventing hot module replacement (HMR) reloads from clearing frontend React states during E2E runs.
+- **Typing Input Race Conditions**: Awaiting visibility of a new document in the UI is not enough if local form states are cleared asynchronously (e.g., `setRoundTitle("")`). Ensure you await the input to be cleared (`await expect(input).toHaveValue('')`) before typing the next round or question name to avoid concurrent state-update race conditions.
