@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { signInAnonymously, onAuthStateChanged, type User } from "firebase/auth";
+import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import type { Event } from "./types";
@@ -24,7 +24,6 @@ type ConnectionState = "connecting" | "connected" | "error";
 
 export default function App() {
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
-  const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeEvents, setActiveEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -34,7 +33,6 @@ export default function App() {
     // Listen for auth state changes
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
         setConnectionState("connected");
       }
     });
