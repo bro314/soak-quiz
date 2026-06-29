@@ -153,6 +153,10 @@ npx -y firebase-tools deploy --only firestore:rules
 
 For AI coding agents modifying or adding features:
 
+### 🐙 GitHub CLI Interaction (gh)
+- **Interaction Tooling**: Agents interact with GitHub issues (reading content, adding comments, changing statuses) using the standard `gh` CLI.
+- **Prerequisites**: Ensure `gh` is installed (`brew install gh`) and authenticated via `gh auth login` with appropriate scopes before attempting issue operations.
+
 ### 🔒 Security & Rules Invariants
 - **Answer Secrecy**: Correct answers must never be accessible on the client side. Keep correct answers under `/secret/answer` path and ensure read access is restricted to `admin` role custom claims only.
 - **Write Limits**: Teams must never write to scoreboard documents, modify `validated` or `points` on answers, or overwrite documents outside their owned `teamId`.
