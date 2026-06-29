@@ -61,6 +61,7 @@ export function RoundEditor() {
 
   // Dialogs
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
 
   // Snackbar toast state
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" | "info" }>({
@@ -151,6 +152,7 @@ export function RoundEditor() {
         description: editDescription,
       });
       setSnackbar({ open: true, message: "Runde erfolgreich gespeichert.", severity: "success" });
+      setOpenEditDialog(false);
     } catch (err: any) {
       console.error(err);
       setSnackbar({ open: true, message: "Fehler beim Speichern: " + err.message, severity: "error" });
@@ -282,6 +284,14 @@ export function RoundEditor() {
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button
                 variant="outlined"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={() => setOpenEditDialog(true)}
+              >
+                Rundendetails bearbeiten
+              </Button>
+              <Button
+                variant="outlined"
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={() => setOpenDeleteDialog(true)}
@@ -291,78 +301,67 @@ export function RoundEditor() {
             </Box>
           </Box>
 
-          <Grid container spacing={4}>
-            {/* Round Settings Form */}
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Card className="glass" sx={{ p: 2, mb: 4 }}>
+          {/* Fragenliste and Frage hinzufügen next to each other */}
+          <Grid container spacing={4} sx={{ mb: 4 }}>
+            {/* Fragenliste */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card className="glass" sx={{ p: 2, height: "100%" }}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
-                    Rundendetails bearbeiten
+                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+                    Fragen in dieser Runde
                   </Typography>
-                  <form onSubmit={handleSaveRound}>
-                    <TextField
-                      label="Rundennummer"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={editNumber}
-                      onChange={(e) => setEditNumber(Number(e.target.value))}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Titel"
-                      fullWidth
-                      variant="outlined"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Beschreibung"
-                      fullWidth
-                      multiline
-                      rows={3}
-                      variant="outlined"
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      sx={{ mb: 2 }}
-                    />
-                    <TextField
-                      label="Rundenstatus"
-                      select
-                      fullWidth
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as Round["status"])}
-                      slotProps={{
-                        select: {
-                          native: true,
-                        },
-                      }}
-                      sx={{ mb: 3 }}
-                    >
-                      <option value="INACTIVE">Inaktiv (INACTIVE)</option>
-                      <option value="ACTIVE">Aktiv (ACTIVE)</option>
-                      <option value="VALIDATION">Validierung (VALIDATION)</option>
-                      <option value="DONE">Beendet (DONE)</option>
-                    </TextField>
-
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      disabled={savingRound}
-                    >
-                      {savingRound ? <CircularProgress size={24} /> : "Runde speichern"}
-                    </Button>
-                  </form>
+                  {questions.length === 0 ? (
+                    <Typography color="text.secondary">Noch keine Fragen angelegt.</Typography>
+                  ) : (
+                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Nr.</TableCell>
+                            <TableCell>Titel</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Aktionen</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {questions.map((q) => (
+                            <TableRow key={q.id}>
+                              <TableCell>{q.number}</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>{q.title}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outlined"
+                                  color={q.status === "ACTIVE" ? "success" : "inherit"}
+                                  size="small"
+                                  onClick={() => handleToggleQuestionStatus(q)}
+                                >
+                                  {q.status === "ACTIVE" ? "Aktiv" : "Inaktiv"}
+                                </Button>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Button
+                                  component={Link}
+                                  to={`/admin/event/${eventId}/round/${roundId}/question/${q.id}`}
+                                  variant="contained"
+                                  size="small"
+                                  startIcon={<EditIcon />}
+                                >
+                                  Bearbeiten
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
                 </CardContent>
               </Card>
+            </Grid>
 
-              {/* Create Question Card */}
-              <Card className="glass" sx={{ p: 2 }}>
+            {/* Create Question Card */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card className="glass" sx={{ p: 2, height: "100%" }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
                     Frage hinzufügen
@@ -415,67 +414,11 @@ export function RoundEditor() {
                 </CardContent>
               </Card>
             </Grid>
+          </Grid>
 
-            {/* Questions list */}
-            <Grid size={{ xs: 12, md: 7 }}>
-              <Card className="glass" sx={{ p: 2, mb: 4 }}>
-                <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-                    Fragen in dieser Runde
-                  </Typography>
-                  {questions.length === 0 ? (
-                    <Typography color="text.secondary">Noch keine Fragen angelegt.</Typography>
-                  ) : (
-                    <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Nr.</TableCell>
-                            <TableCell>Titel</TableCell>
-                            <TableCell>Typ</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell align="right">Aktionen</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {questions.map((q) => (
-                            <TableRow key={q.id}>
-                              <TableCell>{q.number}</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>{q.title}</TableCell>
-                              <TableCell>
-                                <Chip label={q.type} size="small" />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="outlined"
-                                  color={q.status === "ACTIVE" ? "success" : "inherit"}
-                                  size="small"
-                                  onClick={() => handleToggleQuestionStatus(q)}
-                                >
-                                  {q.status === "ACTIVE" ? "Aktiv" : "Inaktiv"}
-                                </Button>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Button
-                                  component={Link}
-                                  to={`/admin/event/${eventId}/round/${roundId}/question/${q.id}`}
-                                  variant="contained"
-                                  size="small"
-                                  startIcon={<EditIcon />}
-                                >
-                                  Bearbeiten
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Round Score Table */}
+          {/* Round Score Table */}
+          <Grid container spacing={4}>
+            <Grid size={{ xs: 12 }}>
               <Card className="glass" sx={{ p: 2 }}>
                 <CardContent>
                   <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
@@ -555,6 +498,73 @@ export function RoundEditor() {
             </Grid>
           </Grid>
         </Container>
+
+        {/* Edit Round Dialog */}
+        <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontWeight: 700 }}>Rundendetails bearbeiten</DialogTitle>
+          <form onSubmit={handleSaveRound}>
+            <DialogContent>
+              <TextField
+                label="Rundennummer"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={editNumber}
+                onChange={(e) => setEditNumber(Number(e.target.value))}
+                sx={{ mb: 2, mt: 1 }}
+                required
+              />
+              <TextField
+                label="Titel"
+                fullWidth
+                variant="outlined"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                sx={{ mb: 2 }}
+                required
+              />
+              <TextField
+                label="Beschreibung"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                label="Rundenstatus"
+                select
+                fullWidth
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value as Round["status"])}
+                slotProps={{
+                  select: {
+                    native: true,
+                  },
+                }}
+                sx={{ mb: 1 }}
+              >
+                <option value="INACTIVE">Inaktiv (INACTIVE)</option>
+                <option value="ACTIVE">Aktiv (ACTIVE)</option>
+                <option value="VALIDATION">Validierung (VALIDATION)</option>
+                <option value="DONE">Beendet (DONE)</option>
+              </TextField>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={() => setOpenEditDialog(false)}>Abbrechen</Button>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={savingRound}
+              >
+                {savingRound ? <CircularProgress size={24} /> : "Runde speichern"}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
 
         {/* Delete Dialog */}
         <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
