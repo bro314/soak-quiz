@@ -230,7 +230,7 @@ export function EventHomeScreen() {
                   </Box>
 
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {points !== null && (
+                    {round.status === "DONE" && points !== null && (
                       <Typography variant="body1" sx={{ fontWeight: 700, mr: 1 }}>
                         {points} Pkt.
                       </Typography>
