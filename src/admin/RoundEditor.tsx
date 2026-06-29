@@ -196,7 +196,7 @@ export function RoundEditor() {
 
       await setDoc(detailRef, {
         content: "",
-        possibleAnswers: questionType === "MULTIPLE_CHOICE" ? ["", "", "", ""] : [],
+        possibleAnswers: questionType === "MULTIPLE_CHOICE" ? ["", "", "", "", ""] : [],
       });
 
       await setDoc(secretRef, {

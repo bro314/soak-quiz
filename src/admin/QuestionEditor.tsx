@@ -40,8 +40,8 @@ export function QuestionEditor() {
   const [editStatus, setEditStatus] = useState<Question["status"]>("INACTIVE");
   const [editContent, setEditContent] = useState("");
   
-  // Possible answers for MC (always keep 4 options for interface consistency)
-  const [mcChoices, setMcChoices] = useState<string[]>(["", "", "", ""]);
+  // Possible answers for MC (always keep 5 options for interface consistency)
+  const [mcChoices, setMcChoices] = useState<string[]>(["", "", "", "", ""]);
   const [mcCorrectIndex, setMcCorrectIndex] = useState<number>(0);
   
   // Correct answer for Free text
@@ -88,10 +88,12 @@ export function QuestionEditor() {
         if (data.possibleAnswers && data.possibleAnswers.length > 0) {
           // Fill options
           const filled = [...data.possibleAnswers];
-          while (filled.length < 4) {
+          while (filled.length < 5) {
             filled.push("");
           }
           setMcChoices(filled);
+        } else {
+          setMcChoices(["", "", "", "", ""]);
         }
       }
     });
