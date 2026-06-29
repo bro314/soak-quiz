@@ -153,6 +153,12 @@ export function EventDashboard() {
 
   const handleStartNextRound = async () => {
     if (!eventId || rounds.length === 0) return;
+    // Check if there is already an active round
+    const hasActiveRound = rounds.some((r) => r.status === "ACTIVE");
+    if (hasActiveRound) {
+      alert("Es läuft bereits eine aktive Runde.");
+      return;
+    }
     // Find first round that is INACTIVE
     const nextRound = rounds.find((r) => r.status === "INACTIVE");
     if (!nextRound) {
@@ -306,7 +312,7 @@ export function EventDashboard() {
                     fullWidth
                     startIcon={<SkipNextIcon />}
                     onClick={handleStartNextRound}
-                    disabled={event.status !== "ACTIVE"}
+                    disabled={event.status !== "ACTIVE" || rounds.some((r) => r.status === "ACTIVE")}
                   >
                     Nächste Runde starten
                   </Button>
