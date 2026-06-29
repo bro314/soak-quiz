@@ -266,9 +266,13 @@ service cloud.firestore {
           (
             isTeam(eventId, resource.data.teamId) &&
             isValidAnswer(request.resource.data) &&
-            // Prevent modifying grading fields
-            request.resource.data.points == resource.data.points &&
-            request.resource.data.validated == resource.data.validated &&
+            // Prevent modifying grading fields unless resetting to 0/false
+            (
+              (request.resource.data.points == resource.data.points &&
+               request.resource.data.validated == resource.data.validated) ||
+              (request.resource.data.points == 0 &&
+               request.resource.data.validated == false)
+            ) &&
             // Check immutable metadata fields
             request.resource.data.teamId == resource.data.teamId &&
             request.resource.data.roundId == resource.data.roundId &&

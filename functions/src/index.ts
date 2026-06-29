@@ -371,8 +371,9 @@ export const onAnswerWritten = onDocumentWritten(
 
     const isNewDoc = !beforeData;
     const answerTextChanged = isNewDoc || beforeData.answerText !== afterData.answerText;
+    const isUngraded = !afterData.gradedAt;
 
-    if (answerTextChanged) {
+    if (answerTextChanged || isUngraded) {
       await gradeAnswer(eventId, answerId, afterData);
     } else {
       const pointsChanged = beforeData && beforeData.points !== afterData.points;

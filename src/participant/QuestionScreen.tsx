@@ -156,8 +156,8 @@ export function QuestionScreen() {
         questionId,
         answerText: finalVal,
         submittedAt: serverTimestamp(),
-        points: existingAnswer ? existingAnswer.points : 0,
-        validated: existingAnswer ? existingAnswer.validated : false,
+        points: 0,
+        validated: false,
       });
       setSuccess("Antwort gespeichert.");
     } catch (err: any) {

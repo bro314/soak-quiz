@@ -152,6 +152,14 @@ test.describe('SoAk Quiz App E2E', () => {
     await expect(teamAPage.locator('h1')).toContainText('Q1 MC');
     await teamAPage.click('text="Choice B"');
     await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    
+    // Change answer on MC question to Choice C
+    await teamAPage.click('text="Choice C"');
+    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+
+    // Change answer on MC question back to Choice B
+    await teamAPage.click('text="Choice B"');
+    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
     await teamAPage.click('text="Zurück zur Runde"');
 
     // 24. Team B: Open Round 1 and Answer Question 1 (Incorrect: Choice C)
@@ -173,6 +181,14 @@ test.describe('SoAk Quiz App E2E', () => {
     // Reproduction test: Verify the input is currently empty and does not contain "Choice B" from Q1!
     await expect(teamAPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('');
     await teamAPage.fill('label:has-text("Deine Antwort") + div input', '   munich!!  ');
+    await teamAPage.click('button:has-text("Antwort absenden")');
+    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+
+    // Re-enter and edit answer
+    await teamAPage.click('text="Zurück zur Runde"');
+    await teamAPage.click('text="Frage 2: Q2 FT"');
+    await expect(teamAPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('   munich!!  ');
+    await teamAPage.fill('label:has-text("Deine Antwort") + div input', '  mUnIcH  ');
     await teamAPage.click('button:has-text("Antwort absenden")');
     await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
     await teamAPage.click('text="Zurück zur Runde"');

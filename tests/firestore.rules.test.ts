@@ -285,6 +285,33 @@ describe('Firestore Security Rules', () => {
         updateDoc(adminAnswerRef, {
           points: 1,
           validated: true,
+          gradedAt: new Date(),
+        })
+      );
+
+      // 7. Team updating already-graded answer with setDoc -> Let's see if this succeeds or fails
+      await assertSucceeds(
+        setDoc(answerDocRef, {
+          teamId: teamAId,
+          roundId: 'round_active',
+          questionId: 'q_active',
+          answerText: 'Munich',
+          submittedAt: new Date(),
+          points: 1,
+          validated: true,
+        })
+      );
+
+      // 8. Team resetting points/validation on update with setDoc -> Succeeds
+      await assertSucceeds(
+        setDoc(answerDocRef, {
+          teamId: teamAId,
+          roundId: 'round_active',
+          questionId: 'q_active',
+          answerText: 'Munich',
+          submittedAt: new Date(),
+          points: 0,
+          validated: false,
         })
       );
     });
