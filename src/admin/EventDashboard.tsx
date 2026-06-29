@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { doc, onSnapshot, collection, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { AdminLayout } from "./components/AdminLayout";
@@ -36,6 +36,7 @@ import type { Event, Round, Team, Scoreboard } from "../types";
 
 export function EventDashboard() {
   const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
 
   // Data state
   const [event, setEvent] = useState<Event | null>(null);
@@ -478,17 +479,20 @@ export function EventDashboard() {
                         </TableHead>
                         <TableBody>
                           {rounds.map((r) => (
-                            <TableRow key={r.id} hover sx={{ cursor: "pointer" }}>
-                              <TableCell>{r.number}</TableCell>
-                              <TableCell>
-                                <Link to={`/admin/event/${eventId}/round/${r.id}`} style={{ textDecoration: "none", color: "inherit", fontWeight: 600 }}>
-                                  {r.title}
-                                </Link>
-                              </TableCell>
-                              <TableCell>
-                                <Chip label={r.status} size="small" variant="outlined" color={r.status === "ACTIVE" ? "success" : r.status === "VALIDATION" ? "warning" : "default"} />
-                              </TableCell>
-                            </TableRow>
+                             <TableRow
+                               key={r.id}
+                               hover
+                               sx={{ cursor: "pointer" }}
+                               onClick={() => navigate(`/admin/event/${eventId}/round/${r.id}`)}
+                             >
+                               <TableCell>{r.number}</TableCell>
+                               <TableCell style={{ fontWeight: 600 }}>
+                                 {r.title}
+                               </TableCell>
+                               <TableCell>
+                                 <Chip label={r.status} size="small" variant="outlined" color={r.status === "ACTIVE" ? "success" : r.status === "VALIDATION" ? "warning" : "default"} />
+                               </TableCell>
+                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>

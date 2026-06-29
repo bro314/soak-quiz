@@ -43,7 +43,7 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.fill('label:has-text("Beschreibung (optional)") + div textarea', 'This is Round 1 description');
     await expect(roundTitleInput).toHaveValue('Round 1');
     await adminPage.click('button:has-text("Runde erstellen")');
-    await expect(adminPage.locator('a:has-text("Round 1")')).toBeVisible();
+    await expect(adminPage.locator('table >> text="Round 1"')).toBeVisible();
     await expect(roundTitleInput).toHaveValue('');
 
     // 6. Admin: Add Round 2
@@ -51,10 +51,10 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.fill('label:has-text("Beschreibung (optional)") + div textarea', 'This is Round 2 description');
     await expect(roundTitleInput).toHaveValue('Round 2');
     await adminPage.click('button:has-text("Runde erstellen")');
-    await expect(adminPage.locator('a:has-text("Round 2")')).toBeVisible();
+    await expect(adminPage.locator('table >> text="Round 2"')).toBeVisible();
 
     // 7. Admin: Go to Round 1 Editor to add Questions
-    await adminPage.click('a:has-text("Round 1")');
+    await adminPage.click('table >> text="Round 1"');
     await expect(adminPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // 8. Admin: Add Question 1 (Multiple Choice)
@@ -138,7 +138,7 @@ test.describe('SoAk Quiz App E2E', () => {
     await expect(adminPage.locator('table >> text="ACTIVE"')).toBeVisible();
 
     // 21. Admin: Open Round 1 Editor to activate questions
-    await adminPage.click('a:has-text("Round 1")');
+    await adminPage.click('table >> text="Round 1"');
     await expect(adminPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // 22. Admin: Activate Question 1 (MC)
