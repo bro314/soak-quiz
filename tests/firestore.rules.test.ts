@@ -186,7 +186,7 @@ describe('Firestore Security Rules', () => {
 
       const teamAId = 'teamA';
       const teamBId = 'teamB';
-      const answerDocId = `${teamAId}__q1`;
+      const answerDocId = `${teamAId}__round1__q1`;
 
       await setDoc(doc(adminDb, `events/${eventId}/answers/${answerDocId}`), {
         teamId: teamAId,
@@ -229,7 +229,7 @@ describe('Firestore Security Rules', () => {
       const teamDb = getTeamClient(teamAId, eventId);
 
       // 1. Submit answer to active round & active question -> Succeeds
-      const answerDocRef = doc(teamDb, `events/${eventId}/answers/${teamAId}__q_active`);
+      const answerDocRef = doc(teamDb, `events/${eventId}/answers/${teamAId}__round_active__q_active`);
       await assertSucceeds(
         setDoc(answerDocRef, {
           teamId: teamAId,
@@ -244,7 +244,7 @@ describe('Firestore Security Rules', () => {
 
       // 2. Submit answer to inactive question -> Fails
       await assertFails(
-        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__q_inactive`), {
+        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__round_active__q_inactive`), {
           teamId: teamAId,
           roundId: 'round_active',
           questionId: 'q_inactive',
@@ -257,7 +257,7 @@ describe('Firestore Security Rules', () => {
 
       // 3. Submit answer to validation round -> Fails
       await assertFails(
-        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__q_validation`), {
+        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__round_validation__q_validation`), {
           teamId: teamAId,
           roundId: 'round_validation',
           questionId: 'q_validation',
@@ -289,7 +289,7 @@ describe('Firestore Security Rules', () => {
       );
 
       // 6. Admin can update points and validated fields
-      const adminAnswerRef = doc(adminDb, `events/${eventId}/answers/${teamAId}__q_active`);
+      const adminAnswerRef = doc(adminDb, `events/${eventId}/answers/${teamAId}__round_active__q_active`);
       await assertSucceeds(
         updateDoc(adminAnswerRef, {
           points: 1,
@@ -318,6 +318,52 @@ describe('Firestore Security Rules', () => {
           roundId: 'round_active',
           questionId: 'q_active',
           answerText: 'Munich',
+          submittedAt: new Date(),
+          points: 0,
+          validated: false,
+        })
+      );
+    });
+  });
+
+  describe('Invariant 10: Team can submit answers across rounds with same questionId', () => {
+    it('allows creating answer in round 2 after answering same questionId in round 1', async () => {
+      const eventId = 'event_123';
+      const adminDb = getAdminClient(eventId);
+      const teamAId = 'teamA';
+      const teamDb = getTeamClient(teamAId, eventId);
+
+      // Set up round 1 (ACTIVE) with question-1
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round1`), { number: 1, title: 'Round 1', status: 'ACTIVE' });
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round1/questions/question-1`), { number: 1, type: 'FREE_TEXT', title: 'Q1', status: 'ACTIVE' });
+
+      // Set up round 2 (ACTIVE) with SAME questionId (question-1)
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round2`), { number: 2, title: 'Round 2', status: 'ACTIVE' });
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round2/questions/question-1`), { number: 1, type: 'FREE_TEXT', title: 'Q1 R2', status: 'ACTIVE' });
+
+      // Team answers question-1 in round 1 -> Succeeds
+      await assertSucceeds(
+        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__round1__question-1`), {
+          teamId: teamAId,
+          roundId: 'round1',
+          questionId: 'question-1',
+          answerText: 'Answer for round 1',
+          submittedAt: new Date(),
+          points: 0,
+          validated: false,
+        })
+      );
+
+      // Close round 1
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round1`), { number: 1, title: 'Round 1', status: 'DONE' });
+
+      // Team answers question-1 in round 2 -> Succeeds (different doc ID due to roundId)
+      await assertSucceeds(
+        setDoc(doc(teamDb, `events/${eventId}/answers/${teamAId}__round2__question-1`), {
+          teamId: teamAId,
+          roundId: 'round2',
+          questionId: 'question-1',
+          answerText: 'Answer for round 2',
           submittedAt: new Date(),
           points: 0,
           validated: false,

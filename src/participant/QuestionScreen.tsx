@@ -111,7 +111,7 @@ export function QuestionScreen() {
     );
 
     // Listen to our existing answer
-    const answerRef = doc(db, "events", eventId, "answers", `${teamId}__${questionId}`);
+    const answerRef = doc(db, "events", eventId, "answers", `${teamId}__${roundId}__${questionId}`);
     const unsubAnswer = onSnapshot(answerRef, (docSnap) => {
       if (docSnap.exists()) {
         const ans = { id: docSnap.id, ...docSnap.data() } as Answer;
@@ -154,7 +154,7 @@ export function QuestionScreen() {
     setSuccess("");
 
     try {
-      const answerDocRef = doc(db, "events", eventId, "answers", `${teamId}__${questionId}`);
+      const answerDocRef = doc(db, "events", eventId, "answers", `${teamId}__${roundId}__${questionId}`);
       await setDoc(answerDocRef, {
         teamId,
         roundId,

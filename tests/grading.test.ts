@@ -124,7 +124,7 @@ describe("Grading & Aggregation (F2)", () => {
     await userCredential.user.getIdTokenResult(true);
 
     // 4. Submit correct MC Answer
-    const mcAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${mcQuestionId}`);
+    const mcAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${roundId}__${mcQuestionId}`);
     await mcAnswerRef.set({
       teamId,
       roundId,
@@ -154,7 +154,7 @@ describe("Grading & Aggregation (F2)", () => {
     expect(scoreboardSnap.data()?.total).toBe(1);
 
     // 5. Submit Free-Text Answer (with extra spaces and symbols to check normalization)
-    const ftAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${ftQuestionId}`);
+    const ftAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${roundId}__${ftQuestionId}`);
     await ftAnswerRef.set({
       teamId,
       roundId,

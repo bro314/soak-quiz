@@ -61,7 +61,7 @@ rules_version = '2';
 //   - correctAnswer: string (required, 1-500 chars)
 //
 // Collection: events/{eventId}/answers
-// Document ID: {teamId}__{questionId}
+// Document ID: {teamId}__{roundId}__{questionId}
 // Fields:
 //   - teamId: string (required)
 //   - roundId: string (required)

@@ -57,7 +57,7 @@ export interface QuestionSecretAnswer {
 }
 
 export interface Answer {
-  id: string; // Format: teamId__questionId
+  id: string; // Format: teamId__roundId__questionId
   teamId: string;
   roundId: string;
   questionId: string;

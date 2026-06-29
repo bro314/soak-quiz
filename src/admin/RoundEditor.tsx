@@ -256,9 +256,9 @@ export function RoundEditor() {
     );
   }
 
-  // Create a mapping of teamId__questionId to Answer for easier score mapping
+  // Create a mapping of teamId__roundId__questionId to Answer for easier score mapping
   const answerMap = new Map<string, Answer>(
-    answers.map((a) => [`${a.teamId}__${a.questionId}`, a])
+    answers.map((a) => [`${a.teamId}__${a.roundId}__${a.questionId}`, a])
   );
 
   return (
@@ -439,7 +439,7 @@ export function RoundEditor() {
                                 {team.name}
                               </TableCell>
                               {questions.map((q) => {
-                                const ans = answerMap.get(`${team.id}__${q.id}`);
+                                const ans = answerMap.get(`${team.id}__${roundId}__${q.id}`);
                                 return (
                                   <TableCell key={q.id} align="right">
                                     {ans ? (
@@ -456,7 +456,7 @@ export function RoundEditor() {
                                 );
                               })}
                               <TableCell align="right" sx={{ fontWeight: 700, color: "secondary.main" }}>
-                                {questions.reduce((sum, q) => sum + (answerMap.get(`${team.id}__${q.id}`)?.points ?? 0), 0)}
+                                {questions.reduce((sum, q) => sum + (answerMap.get(`${team.id}__${roundId}__${q.id}`)?.points ?? 0), 0)}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -464,7 +464,7 @@ export function RoundEditor() {
                             <TableCell>Gesamt</TableCell>
                             {questions.map((q) => {
                               const totalQuestionPoints = teams.reduce((sum, team) => {
-                                const ans = answerMap.get(`${team.id}__${q.id}`);
+                                const ans = answerMap.get(`${team.id}__${roundId}__${q.id}`);
                                 return sum + (ans?.points ?? 0);
                               }, 0);
                               return (
@@ -475,7 +475,7 @@ export function RoundEditor() {
                             })}
                             <TableCell align="right" sx={{ color: "primary.main" }}>
                               {teams.reduce((sum, team) => {
-                                return sum + questions.reduce((qSum, q) => qSum + (answerMap.get(`${team.id}__${q.id}`)?.points ?? 0), 0);
+                                return sum + questions.reduce((qSum, q) => qSum + (answerMap.get(`${team.id}__${roundId}__${q.id}`)?.points ?? 0), 0);
                               }, 0)}
                             </TableCell>
                           </TableRow>
