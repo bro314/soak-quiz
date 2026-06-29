@@ -256,10 +256,12 @@ export function QuestionScreen() {
                 ) : (
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <TextField
+                      key={questionId}
                       label="Deine Antwort"
                       variant="outlined"
                       value={answerInput}
                       onChange={(e) => setAnswerInput(e.target.value)}
+                      autoComplete="off"
                       fullWidth
                     />
                     <Button
