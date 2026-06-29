@@ -515,7 +515,7 @@ export function EventDashboard() {
           {/* Rundenliste and Runde hinzufügen next to each other */}
           <Grid container spacing={4} sx={{ mb: 4 }}>
             {/* Rundenliste */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: event.status === "ACTIVE" ? 12 : 6 }}>
               <Card className="glass" sx={{ p: 2, height: "100%" }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
@@ -563,46 +563,48 @@ export function EventDashboard() {
             </Grid>
 
             {/* Creation Form */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card className="glass" sx={{ p: 2, height: "100%" }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
-                    Runde hinzufügen
-                  </Typography>
-                  <form onSubmit={handleCreateRound}>
-                    <TextField
-                      label="Titel der Runde"
-                      fullWidth
-                      variant="outlined"
-                      value={roundTitle}
-                      onChange={(e) => setRoundTitle(e.target.value)}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <TextField
-                      label="Beschreibung (optional)"
-                      fullWidth
-                      multiline
-                      rows={2}
-                      variant="outlined"
-                      value={roundDescription}
-                      onChange={(e) => setRoundDescription(e.target.value)}
-                      sx={{ mb: 3 }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      startIcon={<AddIcon />}
-                      disabled={createRoundLoading}
-                    >
-                      Runde erstellen
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </Grid>
+            {event.status !== "ACTIVE" && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card className="glass" sx={{ p: 2, height: "100%" }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                      Runde hinzufügen
+                    </Typography>
+                    <form onSubmit={handleCreateRound}>
+                      <TextField
+                        label="Titel der Runde"
+                        fullWidth
+                        variant="outlined"
+                        value={roundTitle}
+                        onChange={(e) => setRoundTitle(e.target.value)}
+                        sx={{ mb: 2 }}
+                        required
+                      />
+                      <TextField
+                        label="Beschreibung (optional)"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        variant="outlined"
+                        value={roundDescription}
+                        onChange={(e) => setRoundDescription(e.target.value)}
+                        sx={{ mb: 3 }}
+                      />
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        startIcon={<AddIcon />}
+                        disabled={createRoundLoading}
+                      >
+                        Runde erstellen
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
           </Grid>
 
           {/* Scoreboard table */}
