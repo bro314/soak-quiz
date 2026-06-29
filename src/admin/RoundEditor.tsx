@@ -33,13 +33,14 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Radio from "@mui/material/Radio";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import type { Round, Question, Team, Answer } from "../types";
+import type { Round, Question, Team, Answer, Event } from "../types";
 
 export function RoundEditor() {
   const { eventId, roundId } = useParams<{ eventId: string; roundId: string }>();
   const navigate = useNavigate();
 
   // Data states
+  const [event, setEvent] = useState<Event | null>(null);
   const [round, setRound] = useState<Round | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -74,6 +75,13 @@ export function RoundEditor() {
     if (!eventId || !roundId) return;
 
     setLoading(true);
+    // Listen to Event doc
+    const unsubEvent = onSnapshot(doc(db, `events/${eventId}`), (snap) => {
+      if (snap.exists()) {
+        setEvent({ id: snap.id, ...snap.data() } as Event);
+      }
+    });
+
     // Listen to Round doc
     const unsubRound = onSnapshot(doc(db, `events/${eventId}/rounds/${roundId}`), (snap) => {
       if (snap.exists()) {
@@ -130,6 +138,7 @@ export function RoundEditor() {
     });
 
     return () => {
+      unsubEvent();
       unsubRound();
       unsubDetail();
       unsubQuestions();
@@ -291,7 +300,7 @@ export function RoundEditor() {
           {/* Fragenliste and Frage hinzufügen next to each other */}
           <Grid container spacing={4} sx={{ mb: 4 }}>
             {/* Fragenliste */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: event?.status === "ACTIVE" ? 12 : 6 }}>
               <Card className="glass" sx={{ p: 2, height: "100%" }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
@@ -338,60 +347,62 @@ export function RoundEditor() {
             </Grid>
 
             {/* Create Question Card */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card className="glass" sx={{ p: 2, height: "100%" }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
-                    Frage hinzufügen
-                  </Typography>
-                  <form onSubmit={handleCreateQuestion}>
-                    <TextField
-                      label="Frage-Titel"
-                      fullWidth
-                      variant="outlined"
-                      value={questionTitle}
-                      onChange={(e) => setQuestionTitle(e.target.value)}
-                      sx={{ mb: 2 }}
-                      required
-                    />
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Fragentyp:
-                      </Typography>
-                      <FormControlLabel
-                        control={
-                          <Radio
-                            checked={questionType === "MULTIPLE_CHOICE"}
-                            onChange={() => setQuestionType("MULTIPLE_CHOICE")}
-                          />
-                        }
-                        label="Multiple Choice"
+            {event?.status !== "ACTIVE" && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card className="glass" sx={{ p: 2, height: "100%" }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                      Frage hinzufügen
+                    </Typography>
+                    <form onSubmit={handleCreateQuestion}>
+                      <TextField
+                        label="Frage-Titel"
+                        fullWidth
+                        variant="outlined"
+                        value={questionTitle}
+                        onChange={(e) => setQuestionTitle(e.target.value)}
+                        sx={{ mb: 2 }}
+                        required
                       />
-                      <FormControlLabel
-                        control={
-                          <Radio
-                            checked={questionType === "FREE_TEXT"}
-                            onChange={() => setQuestionType("FREE_TEXT")}
-                          />
-                        }
-                        label="Freitext (Normalisiert)"
-                      />
-                    </Box>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Fragentyp:
+                        </Typography>
+                        <FormControlLabel
+                          control={
+                            <Radio
+                              checked={questionType === "MULTIPLE_CHOICE"}
+                              onChange={() => setQuestionType("MULTIPLE_CHOICE")}
+                            />
+                          }
+                          label="Multiple Choice"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Radio
+                              checked={questionType === "FREE_TEXT"}
+                              onChange={() => setQuestionType("FREE_TEXT")}
+                            />
+                          }
+                          label="Freitext (Normalisiert)"
+                        />
+                      </Box>
 
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      startIcon={<AddIcon />}
-                      disabled={createQuestionLoading}
-                    >
-                      Frage erstellen
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </Grid>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        startIcon={<AddIcon />}
+                        disabled={createQuestionLoading}
+                      >
+                        Frage erstellen
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
           </Grid>
 
           {/* Round Score Table */}
