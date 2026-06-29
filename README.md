@@ -116,10 +116,13 @@ npm run db:seed
 The test suite validates security rules, database triggers, callable authentication methods, and complete end-to-end browser flows.
 
 ```bash
-# Run unit and integration tests against local emulators:
+# Run both rules and Playwright E2E tests:
+npm test
+
+# Run unit and integration tests against local emulators only:
 npm run test:rules
 
-# Run Playwright End-to-End (E2E) browser tests:
+# Run Playwright End-to-End (E2E) browser tests only:
 npx playwright test
 ```
 
@@ -161,6 +164,7 @@ For AI coding agents modifying or adding features:
 - **Answer Secrecy**: Correct answers must never be accessible on the client side. Keep correct answers under `/secret/answer` path and ensure read access is restricted to `admin` role custom claims only.
 - **Write Limits**: Teams must never write to scoreboard documents, modify `validated` or `points` on answers, or overwrite documents outside their owned `teamId`.
 - **Rules Null Safety**: When client-side `onSnapshot` queries listen to non-existent documents (e.g. before answers are submitted), Firestore rules must use `resource == null || ...` safe guards to avoid null pointer exceptions (`Null value error`) that crash snapshot listeners.
+- **Metadata/Grading Fields Update**: When teams resubmit/update their answers, client payloads must always set grading fields (`points: 0` and `validated: false`) rather than forwarding previous graded values. This prevents race conditions where the client sends stale values that mismatch the server's graded values, which security rules reject.
 
 ### ⚡ MUI v9 Specifics
 - **Icon Suffixes**: MUI v9 uses `Outlined` suffix in imports rather than base names for outlines. For example, use `CheckCircleOutlineOutlined` and `ErrorOutlineOutlined`. Importing legacy names will break the production bundler.
@@ -173,3 +177,4 @@ For AI coding agents modifying or adding features:
 ### 🌐 Playwright E2E Gotchas & Invariants
 - **Vite Watch Ignored Paths**: Playwright writes test trace/results to `test-results/`. Vite is configured in [vite.config.ts](file:///Users/brohlfs/git/soak-quiz/vite.config.ts) and `.gitignore` to ignore this directory, preventing hot module replacement (HMR) reloads from clearing frontend React states during E2E runs.
 - **Typing Input Race Conditions**: Awaiting visibility of a new document in the UI is not enough if local form states are cleared asynchronously (e.g., `setRoundTitle("")`). Ensure you await the input to be cleared (`await expect(input).toHaveValue('')`) before typing the next round or question name to avoid concurrent state-update race conditions.
+- **Workflow State Consistency**: For multi-user workflows that verify aggregate scoreboard stats at the end of the test, any intermediate verification actions (such as resubmitting incorrect answers or testing bounds) must be reverted or cleaned up before advancing rounds to maintain final assertions.

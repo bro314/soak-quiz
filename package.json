@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test:rules": "vitest run tests/ --fileParallelism=false",
+    "test": "npm run test:rules && npx playwright test",
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
