@@ -170,6 +170,8 @@ test.describe('SoAk Quiz App E2E', () => {
     // 26. Team A: Answer Question 2 (Correct: Munich, gets auto-graded and validation suggested)
     await teamAPage.click('text="Frage 2: Q2 FT"');
     await expect(teamAPage.locator('h1')).toContainText('Q2 FT');
+    // Reproduction test: Verify the input is currently empty and does not contain "Choice B" from Q1!
+    await expect(teamAPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('');
     await teamAPage.fill('label:has-text("Deine Antwort") + div input', '   munich!!  ');
     await teamAPage.click('button:has-text("Antwort absenden")');
     await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
@@ -178,7 +180,10 @@ test.describe('SoAk Quiz App E2E', () => {
     // 27. Team B: Answer Question 2 (Incorrect: Berlin)
     await teamBPage.click('text="Frage 2: Q2 FT"');
     await expect(teamBPage.locator('h1')).toContainText('Q2 FT');
+    // Reproduction test: Verify the input is currently empty and does not contain "Choice C" from Q1!
+    await expect(teamBPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('');
     await teamBPage.fill('label:has-text("Deine Antwort") + div input', 'Berlin');
+
     await teamBPage.click('button:has-text("Antwort absenden")');
     await expect(teamBPage.locator('text=Antwort gespeichert.')).toBeVisible();
     await teamBPage.click('text="Zurück zur Runde"');

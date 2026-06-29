@@ -131,6 +131,15 @@ export function QuestionScreen() {
     };
   }, [eventId, roundId, questionId, teamId, isAuthorized]);
 
+  // Immediately clear answers when switching questions to prevent prefilling state leaks
+  useEffect(() => {
+    setExistingAnswer(null);
+    setAnswerInput("");
+    setError("");
+    setSuccess("");
+  }, [questionId]);
+
+
   const handleSaveAnswer = async (valToSave?: string) => {
     if (!eventId || !roundId || !questionId || !teamId) return;
     const finalVal = valToSave !== undefined ? valToSave : answerInput;
