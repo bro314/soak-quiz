@@ -22,11 +22,7 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
     await adminPage.fill('label:has-text("Admin Passwort") + div input', adminPassword);
     await adminPage.click('button:has-text("Event erstellen")');
 
-    // Click event to go to dashboard
-    const eventLink = adminPage.locator(`a:has-text("${eventId}")`);
-    await expect(eventLink).toBeVisible({ timeout: 10000 });
-    await eventLink.click();
-    await expect(adminPage.locator('h1')).toContainText('Issue 8 Event');
+    await expect(adminPage.locator('h1')).toContainText('Issue 8 Event', { timeout: 10000 });
 
     // Create Round 1
     const roundTitleInput = adminPage.locator('label:has-text("Titel der Runde") + div input');

@@ -194,7 +194,7 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAuthenticated() && 
                     !(request.auth.token.role == 'team' && request.auth.token.eventId == eventId) && 
                     isValidEvent(request.resource.data);

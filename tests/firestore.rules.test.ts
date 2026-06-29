@@ -106,8 +106,8 @@ describe('Firestore Security Rules', () => {
       await assertFails(getDoc(doc(nonMemberDb, `events/${eventId}/rounds/round1/questions/q1`)));
       await assertFails(getDoc(doc(nonMemberDb, `events/${eventId}/scoreboard/teamA`)));
 
-      // Unauthenticated reads should fail on everything
-      await assertFails(getDoc(doc(unauthDb, `events/${eventId}`)));
+      // Unauthenticated reads should succeed on events but fail on teams
+      await assertSucceeds(getDoc(doc(unauthDb, `events/${eventId}`)));
       await assertFails(getDoc(doc(unauthDb, `events/${eventId}/teams/teamA`)));
     });
   });

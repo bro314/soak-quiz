@@ -18,11 +18,7 @@ test.describe('Issue 4 Reproduction', () => {
     await adminPage.fill('label:has-text("Admin Passwort") + div input', adminPassword);
     await adminPage.click('button:has-text("Event erstellen")');
 
-    // Click event to go to dashboard and start it
-    const eventLink = adminPage.locator(`a:has-text("${eventId}")`);
-    await expect(eventLink).toBeVisible({ timeout: 10000 });
-    await eventLink.click();
-    await expect(adminPage.locator('h1')).toContainText('Issue 4 Event');
+    await expect(adminPage.locator('h1')).toContainText('Issue 4 Event', { timeout: 10000 });
     await adminPage.click('button:has-text("Event starten")');
     await expect(adminPage.locator('text=Gestartet (ACTIVE)')).toBeVisible();
 

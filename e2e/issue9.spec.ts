@@ -22,11 +22,7 @@ test.describe('Issue 9: Prefilled answers to Freitext questions', () => {
     await adminPage.fill('label:has-text("Admin Passwort") + div input', adminPassword);
     await adminPage.click('button:has-text("Event erstellen")');
 
-    // Click event to go to dashboard
-    const eventLink = adminPage.locator(`a:has-text("${eventId}")`);
-    await expect(eventLink).toBeVisible({ timeout: 10000 });
-    await eventLink.click();
-    await expect(adminPage.locator('h1')).toContainText('Issue 9 Event');
+    await expect(adminPage.locator('h1')).toContainText('Issue 9 Event', { timeout: 10000 });
 
     // Create Round 1
     const roundTitleInput = adminPage.locator('label:has-text("Titel der Runde") + div input');

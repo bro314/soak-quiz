@@ -6,29 +6,14 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Container from "@mui/material/Container";
 import QuizIcon from "@mui/icons-material/Quiz";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../../firebase";
-import { useClaims } from "../../hooks/useClaims";
+import { Link, useParams } from "react-router-dom";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const navigate = useNavigate();
   const { eventId } = useParams<{ eventId?: string }>();
-  const { refreshClaims } = useClaims();
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      await refreshClaims();
-      navigate("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -62,10 +47,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
             </>
           )}
-
-          <Button onClick={handleLogout} color="secondary" variant="outlined" size="small">
-            Abmelden
-          </Button>
         </Toolbar>
       </AppBar>
 

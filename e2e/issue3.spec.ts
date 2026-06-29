@@ -17,11 +17,7 @@ test.describe('Issue 3 Reproduction', () => {
     await page.fill('label:has-text("Admin Passwort") + div input', adminPassword);
     await page.click('button:has-text("Event erstellen")');
 
-    // Click event to go to dashboard
-    const eventLink = page.locator(`a:has-text("${eventId}")`);
-    await expect(eventLink).toBeVisible({ timeout: 10000 });
-    await eventLink.click();
-    await expect(page.locator('h1')).toContainText('Issue 3 Event');
+    await expect(page.locator('h1')).toContainText('Issue 3 Event', { timeout: 10000 });
 
     // Create Round 1
     const roundTitleInput = page.locator('label:has-text("Titel der Runde") + div input');

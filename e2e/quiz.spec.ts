@@ -29,13 +29,8 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.fill('label:has-text("Admin Passwort") + div input', adminPassword);
     await adminPage.click('button:has-text("Event erstellen")');
 
-    // 3. Admin: Verify event is created and click on it in "Deine Events"
-    const eventLink = adminPage.locator(`a:has-text("${eventId}")`);
-    await expect(eventLink).toBeVisible({ timeout: 10000 });
-    await eventLink.click();
-
     // 4. Admin: Verify we are on the Event Dashboard
-    await expect(adminPage.locator('h1')).toContainText('E2E Test Event');
+    await expect(adminPage.locator('h1')).toContainText('E2E Test Event', { timeout: 10000 });
 
     // 5. Admin: Add Round 1
     const roundTitleInput = adminPage.locator('label:has-text("Titel der Runde") + div input');

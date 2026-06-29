@@ -17,14 +17,14 @@ export function RootLayout() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setLoading(false);
+      } else {
+        setLoading(true);
+        signInAnonymously(auth).catch((err) => {
+          console.error("Firebase auth failed:", err);
+          setError(err.message || "Failed to initialize connection.");
+          setLoading(false);
+        });
       }
-    });
-
-    // Sign in anonymously if not already signed in
-    signInAnonymously(auth).catch((err) => {
-      console.error("Firebase auth failed:", err);
-      setError(err.message || "Failed to initialize connection.");
-      setLoading(false);
     });
 
     return unsubscribe;

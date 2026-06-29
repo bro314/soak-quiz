@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { onSnapshot, doc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
+import { signOut } from "firebase/auth";
 import { createEventCallable, loginAdminCallable } from "../firebase/functions";
 import { AdminLayout } from "./components/AdminLayout";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
@@ -22,6 +23,7 @@ import type { Event } from "../types";
 import { useClaims } from "../hooks/useClaims";
 
 export function AdminHome() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { claims, loading: claimsLoading, refreshClaims } = useClaims();
@@ -84,11 +86,13 @@ export function AdminHome() {
         maxTeamSize,
         adminPassword,
       });
+      const createdEventId = newEventId;
       await refreshClaims();
       setNewEventId("");
       setName("");
       setAdminPassword("");
       setCreateError("");
+      navigate(`/admin/event/${createdEventId}`);
     } catch (err: any) {
       console.error(err);
       setCreateError(err.message || "Fehler beim Erstellen des Events.");
@@ -107,14 +111,25 @@ export function AdminHome() {
     setLoginError("");
     try {
       await loginAdminCallable({ eventId: loginEventId, password: loginPassword });
+      const targetEventId = loginEventId;
       await refreshClaims();
       setLoginEventId("");
       setLoginPassword("");
+      navigate(`/admin/event/${targetEventId}`);
     } catch (err: any) {
       console.error(err);
       setLoginError(err.message || "Falsches Passwort oder ungültige Event-ID.");
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      await refreshClaims();
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
   };
 
@@ -208,7 +223,7 @@ export function AdminHome() {
               <Card className="glass" sx={{ p: 2 }}>
                 <CardContent>
                   <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-                    Deine Events
+                    Dein Event
                   </Typography>
 
                   {loading ? (
@@ -220,18 +235,29 @@ export function AdminHome() {
                       Keine Events gefunden. Erstelle links ein neues Event.
                     </Typography>
                   ) : (
-                    <List sx={{ width: "100%", bgcolor: "transparent" }}>
-                      {events.map((event) => (
-                        <ListItem key={event.id} disablePadding sx={{ mb: 1, border: "1px solid rgba(255,255,255,0.05)", borderRadius: 1 }}>
-                          <ListItemButton component={Link} to={`/admin/event/${event.id}`}>
-                            <ListItemText
-                              primary={<Typography sx={{ fontWeight: 600 }}>{event.name}</Typography>}
-                              secondary={`ID: ${event.id} | Max Teamgröße: ${event.maxTeamSize} | Status: ${event.status}`}
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <List sx={{ width: "100%", bgcolor: "transparent", p: 0 }}>
+                        {events.map((event) => (
+                          <ListItem key={event.id} disablePadding sx={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: 1 }}>
+                            <ListItemButton component={Link} to={`/admin/event/${event.id}`}>
+                              <ListItemText
+                                primary={<Typography sx={{ fontWeight: 600 }}>{event.name}</Typography>}
+                                secondary={`ID: ${event.id} | Max Teamgröße: ${event.maxTeamSize} | Status: ${event.status}`}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                      <Button
+                        onClick={handleLogout}
+                        variant="outlined"
+                        color="secondary"
+                        fullWidth
+                        size="large"
+                      >
+                        Abmelden
+                      </Button>
+                    </Box>
                   )}
                 </CardContent>
               </Card>
