@@ -194,7 +194,7 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if isEventMember(eventId);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && 
                     !(request.auth.token.role == 'team' && request.auth.token.eventId == eventId) && 
                     isValidEvent(request.resource.data);
@@ -206,7 +206,7 @@ service cloud.firestore {
       }
 
       match /teams/{teamId} {
-        allow read: if isEventMember(eventId);
+        allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidTeam(request.resource.data);
         allow update: if (isAdmin(eventId) || isTeam(eventId, teamId)) && isValidTeam(request.resource.data);
         allow delete: if isAdmin(eventId);
