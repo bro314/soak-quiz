@@ -171,7 +171,8 @@ export function ValidationScreen() {
       // Check if this was the last unvalidated answer for this round in the current state
       const roundId = ans.roundId;
       const remainingForRound = answers.filter((a) => a.roundId === roundId && a.id !== ans.id);
-      if (remainingForRound.length === 0) {
+      const r = roundsMap.get(roundId);
+      if (remainingForRound.length === 0 && r?.status === "VALIDATION") {
         await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}`), {
           status: "DONE",
         });
