@@ -224,19 +224,6 @@ export function RoundEditor() {
     }
   };
 
-  const handleToggleQuestionStatus = async (q: Question) => {
-    if (!eventId || !roundId) return;
-    const newStatus: Question["status"] = q.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-    try {
-      await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${q.id}`), {
-        status: newStatus,
-      });
-    } catch (err: any) {
-      console.error(err);
-      setSnackbar({ open: true, message: err.message, severity: "error" });
-    }
-  };
-
   if (loading) {
     return (
       <AdminRouteGuard>
@@ -307,8 +294,8 @@ export function RoundEditor() {
             <Grid size={{ xs: 12, md: 6 }}>
               <Card className="glass" sx={{ p: 2, height: "100%" }}>
                 <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-                    Fragen in dieser Runde
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 2 }}>
+                    Fragenliste
                   </Typography>
                   {questions.length === 0 ? (
                     <Typography color="text.secondary">Noch keine Fragen angelegt.</Typography>
@@ -320,36 +307,27 @@ export function RoundEditor() {
                             <TableCell>Nr.</TableCell>
                             <TableCell>Titel</TableCell>
                             <TableCell>Status</TableCell>
-                            <TableCell align="right">Aktionen</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {questions.map((q) => (
-                            <TableRow key={q.id}>
-                              <TableCell>{q.number}</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>{q.title}</TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="outlined"
-                                  color={q.status === "ACTIVE" ? "success" : "inherit"}
-                                  size="small"
-                                  onClick={() => handleToggleQuestionStatus(q)}
-                                >
-                                  {q.status === "ACTIVE" ? "Aktiv" : "Inaktiv"}
-                                </Button>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Button
-                                  component={Link}
-                                  to={`/admin/event/${eventId}/round/${roundId}/question/${q.id}`}
-                                  variant="contained"
-                                  size="small"
-                                  startIcon={<EditIcon />}
-                                >
-                                  Bearbeiten
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                             <TableRow
+                               key={q.id}
+                               hover
+                               sx={{ cursor: "pointer" }}
+                               onClick={() => navigate(`/admin/event/${eventId}/round/${roundId}/question/${q.id}`)}
+                             >
+                               <TableCell>{q.number}</TableCell>
+                               <TableCell style={{ fontWeight: 600 }}>{q.title}</TableCell>
+                               <TableCell>
+                                 <Chip
+                                   label={q.status}
+                                   size="small"
+                                   variant="outlined"
+                                   color={q.status === "ACTIVE" ? "success" : "default"}
+                                 />
+                               </TableCell>
+                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>

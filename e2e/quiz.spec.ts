@@ -67,7 +67,7 @@ test.describe('SoAk Quiz App E2E', () => {
     await expect(adminPage.locator('text=Q2 FT')).toBeVisible();
 
     // 10. Admin: Configure Question 1 (MC)
-    await adminPage.locator('tr:has-text("Q1 MC")').locator('text="Bearbeiten"').click();
+    await adminPage.locator('tr:has-text("Q1 MC")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Option 1") + div input', 'Choice A');
     await adminPage.fill('label:has-text("Option 2") + div input', 'Choice B');
@@ -78,7 +78,7 @@ test.describe('SoAk Quiz App E2E', () => {
     await adminPage.click('text="Zurück zur Runde"');
 
     // 11. Admin: Configure Question 2 (FT)
-    await adminPage.locator('tr:has-text("Q2 FT")').locator('text="Bearbeiten"').click();
+    await adminPage.locator('tr:has-text("Q2 FT")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 2 bearbeiten');
     await adminPage.fill('label:has-text("Richtige Antwort") + div input', 'Munich');
     await adminPage.click('button:has-text("Frage speichern")');
@@ -137,8 +137,11 @@ test.describe('SoAk Quiz App E2E', () => {
     await expect(adminPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // 22. Admin: Activate Question 1 (MC)
-    await adminPage.locator('tr:has-text("Q1 MC")').locator('button:has-text("Inaktiv")').click();
-    await expect(adminPage.locator('tr:has-text("Q1 MC")').locator('button:has-text("Aktiv")')).toBeVisible();
+    await adminPage.locator('tr:has-text("Q1 MC")').click();
+    await adminPage.selectOption('label:has-text("Status") + div select', 'ACTIVE');
+    await adminPage.click('button:has-text("Frage speichern")');
+    await adminPage.click('text="Zurück zur Runde"');
+    await expect(adminPage.locator('tr:has-text("Q1 MC") >> text="ACTIVE"')).toBeVisible();
 
     // 23. Team A: Open Round 1 and Answer Question 1 (Correct: Choice B)
     await teamAPage.click('a:has-text("Round 1")');
@@ -167,8 +170,11 @@ test.describe('SoAk Quiz App E2E', () => {
     await teamBPage.click('text="Zurück zur Runde"');
 
     // 25. Admin: Activate Question 2 (Free Text)
-    await adminPage.locator('tr:has-text("Q2 FT")').locator('button:has-text("Inaktiv")').click();
-    await expect(adminPage.locator('tr:has-text("Q2 FT")').locator('button:has-text("Aktiv")')).toBeVisible();
+    await adminPage.locator('tr:has-text("Q2 FT")').click();
+    await adminPage.selectOption('label:has-text("Status") + div select', 'ACTIVE');
+    await adminPage.click('button:has-text("Frage speichern")');
+    await adminPage.click('text="Zurück zur Runde"');
+    await expect(adminPage.locator('tr:has-text("Q2 FT") >> text="ACTIVE"')).toBeVisible();
 
     // 26. Team A: Answer Question 2 (Correct: Munich, gets auto-graded and validation suggested)
     await teamAPage.click('text="Frage 2: Q2 FT"');

@@ -42,7 +42,7 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
     await expect(adminPage.locator('text=Q1 Free Text')).toBeVisible();
 
     // Configure Question 1 (Free Text)
-    await adminPage.locator('tr:has-text("Q1 Free Text")').locator('text="Bearbeiten"').click();
+    await adminPage.locator('tr:has-text("Q1 Free Text")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Richtige Antwort") + div input', 'correct answer');
     await adminPage.click('button:has-text("Frage speichern")');
@@ -68,8 +68,11 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
 
     // Admin: Go to Round 1 Editor to activate questions
     await adminPage.click('table >> text="Round 1"');
-    await adminPage.locator('tr:has-text("Q1 Free Text")').locator('button:has-text("Inaktiv")').click();
-    await expect(adminPage.locator('tr:has-text("Q1 Free Text")').locator('button:has-text("Aktiv")')).toBeVisible();
+    await adminPage.locator('tr:has-text("Q1 Free Text")').click();
+    await adminPage.selectOption('label:has-text("Status") + div select', 'ACTIVE');
+    await adminPage.click('button:has-text("Frage speichern")');
+    await adminPage.click('text="Zurück zur Runde"');
+    await expect(adminPage.locator('tr:has-text("Q1 Free Text") >> text="ACTIVE"')).toBeVisible();
 
     // Team: Open Round 1 and Answer Question 1
     await teamPage.click('a:has-text("Round 1")');

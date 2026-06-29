@@ -41,7 +41,7 @@ test.describe('Issue 6: Status validation phase although no answer is left to va
     await expect(adminPage.locator('text=Q1 MC')).toBeVisible();
 
     // Configure Question 1 (MC)
-    await adminPage.locator('tr:has-text("Q1 MC")').locator('text="Bearbeiten"').click();
+    await adminPage.locator('tr:has-text("Q1 MC")').click();
     await expect(adminPage.locator('h1')).toContainText('Frage 1 bearbeiten');
     await adminPage.fill('label:has-text("Option 1") + div input', 'Choice A');
     await adminPage.fill('label:has-text("Option 2") + div input', 'Choice B');
@@ -71,8 +71,11 @@ test.describe('Issue 6: Status validation phase although no answer is left to va
 
     // Admin: Go to Round 1 Editor to activate questions
     await adminPage.click('table >> text="Round 1"');
-    await adminPage.locator('tr:has-text("Q1 MC")').locator('button:has-text("Inaktiv")').click();
-    await expect(adminPage.locator('tr:has-text("Q1 MC")').locator('button:has-text("Aktiv")')).toBeVisible();
+    await adminPage.locator('tr:has-text("Q1 MC")').click();
+    await adminPage.selectOption('label:has-text("Status") + div select', 'ACTIVE');
+    await adminPage.click('button:has-text("Frage speichern")');
+    await adminPage.click('text="Zurück zur Runde"');
+    await expect(adminPage.locator('tr:has-text("Q1 MC") >> text="ACTIVE"')).toBeVisible();
 
     // Team: Open Round 1 and Answer Question 1
     await teamPage.click('a:has-text("Round 1")');
