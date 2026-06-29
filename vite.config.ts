@@ -7,4 +7,9 @@ export default defineConfig({
   build: {
     minify: false,
   },
+  server: {
+    watch: {
+      ignored: ['**/test-results/**', '**/playwright-report/**']
+    }
+  }
 })

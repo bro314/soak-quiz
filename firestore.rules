@@ -244,6 +244,7 @@ service cloud.firestore {
         // Read is allowed for admins, or the specific team who owns this answer
         allow read: if isEventMember(eventId) && (
           isAdmin(eventId) || 
+          resource == null ||
           isTeam(eventId, resource.data.teamId)
         );
 

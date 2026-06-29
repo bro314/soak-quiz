@@ -31,3 +31,8 @@ functions/lib/
 
 # Local env
 .env.sh
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/
