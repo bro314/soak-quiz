@@ -156,6 +156,15 @@ export function ValidationScreen() {
         points: pts,
         validated: true,
       });
+
+      // Check if this was the last unvalidated answer for this round in the current state
+      const roundId = ans.roundId;
+      const remainingForRound = answers.filter((a) => a.roundId === roundId && a.id !== ans.id);
+      if (remainingForRound.length === 0) {
+        await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}`), {
+          status: "DONE",
+        });
+      }
     } catch (err: any) {
       console.error(err);
       alert("Fehler beim Validieren: " + err.message);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, onSnapshot, collection, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, onSnapshot, collection, setDoc, updateDoc, writeBatch, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { AdminLayout } from "./components/AdminLayout";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
@@ -32,6 +32,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import AddIcon from "@mui/icons-material/Add";
+import CheckIcon from "@mui/icons-material/Check";
 import type { Event, Round, Team, Scoreboard } from "../types";
 
 export function EventDashboard() {
@@ -184,8 +185,37 @@ export function EventDashboard() {
       return;
     }
     try {
+      // Check if there are any unvalidated answers for this round
+      const answersRef = collection(db, `events/${eventId}/answers`);
+      const unvalidatedAnswersSnap = await getDocs(
+        query(
+          answersRef,
+          where("roundId", "==", activeRound.id),
+          where("validated", "==", false)
+        )
+      );
+
+      const status = unvalidatedAnswersSnap.empty ? "DONE" : "VALIDATION";
+
       await updateDoc(doc(db, `events/${eventId}/rounds/${activeRound.id}`), {
-        status: "VALIDATION",
+        status,
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    }
+  };
+
+  const handleCompleteValidation = async () => {
+    if (!eventId) return;
+    const validationRound = rounds.find((r) => r.status === "VALIDATION");
+    if (!validationRound) {
+      alert("Es gibt momentan keine Runde in der Validierung.");
+      return;
+    }
+    try {
+      await updateDoc(doc(db, `events/${eventId}/rounds/${validationRound.id}`), {
+        status: "DONE",
       });
     } catch (err: any) {
       console.error(err);
@@ -330,6 +360,21 @@ export function EventDashboard() {
                     Aktuelle Runde schließen
                   </Button>
                 </Grid>
+
+                {rounds.some((r) => r.status === "VALIDATION") && (
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      fullWidth
+                      startIcon={<CheckIcon />}
+                      onClick={handleCompleteValidation}
+                      disabled={event.status !== "ACTIVE"}
+                    >
+                      Runde abschließen
+                    </Button>
+                  </Grid>
+                )}
 
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
