@@ -140,6 +140,11 @@ export function QuestionScreen() {
   }, [questionId]);
 
 
+  // Find current index in list to enable Next/Prev buttons
+  const currentIndex = questionsList.findIndex((q) => q.id === questionId);
+  const prevQuestion = currentIndex > 0 ? questionsList[currentIndex - 1] : null;
+  const nextQuestion = currentIndex !== -1 && currentIndex < questionsList.length - 1 ? questionsList[currentIndex + 1] : null;
+
   const handleSaveAnswer = async (valToSave?: string) => {
     if (!eventId || !roundId || !questionId || !teamId) return;
     const finalVal = valToSave !== undefined ? valToSave : answerInput;
@@ -159,7 +164,11 @@ export function QuestionScreen() {
         points: 0,
         validated: false,
       });
-      setSuccess("Antwort gespeichert.");
+      if (nextQuestion) {
+        navigate(`/event/${eventId}/round/${roundId}/question/${nextQuestion.id}`);
+      } else {
+        navigate(`/event/${eventId}/round/${roundId}`);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Fehler beim Speichern der Antwort.");
@@ -175,11 +184,6 @@ export function QuestionScreen() {
       </Container>
     );
   }
-
-  // Find current index in list to enable Next/Prev buttons
-  const currentIndex = questionsList.findIndex((q) => q.id === questionId);
-  const prevQuestion = currentIndex > 0 ? questionsList[currentIndex - 1] : null;
-  const nextQuestion = currentIndex !== -1 && currentIndex < questionsList.length - 1 ? questionsList[currentIndex + 1] : null;
 
   const isQuestionActive = question?.status === "ACTIVE";
   const isRoundActive = round?.status === "ACTIVE";
@@ -205,92 +209,96 @@ export function QuestionScreen() {
         </Alert>
       )}
 
-      {isQuestionActive && question && (
+      {question && (
         <Card className="glass" sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="caption" color="secondary" sx={{ fontWeight: 650, display: "block", mb: 1 }}>
               Runde {round?.number} • Frage {question.number}
             </Typography>
-            <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 800, mb: 3 }}>
+            <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 800, mb: isQuestionActive ? 3 : 0 }}>
               {question.title}
             </Typography>
 
-            <Typography variant="body1" sx={{ mb: 4, whiteSpace: "pre-wrap" }}>
-              {detail?.content || "Siehe Präsentation des Spielleiters."}
-            </Typography>
+            {isQuestionActive && (
+              <>
+                <Typography variant="body1" sx={{ mb: 4, whiteSpace: "pre-wrap" }}>
+                  {detail?.content || "Siehe Präsentation des Spielleiters."}
+                </Typography>
 
-            {/* Answer Options */}
-            {canAnswer ? (
-              <Box sx={{ mt: 2 }}>
-                {question.type === "MULTIPLE_CHOICE" ? (
-                  <FormControl component="fieldset" fullWidth>
-                    <RadioGroup
-                      value={answerInput}
-                      onChange={(e) => {
-                        setAnswerInput(e.target.value);
-                        handleSaveAnswer(e.target.value);
-                      }}
-                    >
-                      {detail?.possibleAnswers?.map((ansOpt, idx) => (
-                        <FormControlLabel
-                          key={idx}
-                          value={ansOpt}
-                          control={<Radio color="secondary" />}
-                          label={ansOpt}
-                          sx={{
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: 2,
-                            p: 1.5,
-                            mb: 2,
-                            width: "100%",
-                            marginLeft: 0,
-                            marginRight: 0,
-                            "&:hover": {
-                              backgroundColor: "rgba(124, 77, 255, 0.08)",
-                            },
+                {/* Answer Options */}
+                {canAnswer ? (
+                  <Box sx={{ mt: 2 }}>
+                    {question.type === "MULTIPLE_CHOICE" ? (
+                      <FormControl component="fieldset" fullWidth>
+                        <RadioGroup
+                          value={answerInput}
+                          onChange={(e) => {
+                            setAnswerInput(e.target.value);
+                            handleSaveAnswer(e.target.value);
                           }}
+                        >
+                          {detail?.possibleAnswers?.map((ansOpt, idx) => (
+                            <FormControlLabel
+                              key={idx}
+                              value={ansOpt}
+                              control={<Radio color="secondary" />}
+                              label={ansOpt}
+                              sx={{
+                                border: "1px solid rgba(255, 255, 255, 0.08)",
+                                borderRadius: 2,
+                                p: 1.5,
+                                mb: 2,
+                                width: "100%",
+                                marginLeft: 0,
+                                marginRight: 0,
+                                "&:hover": {
+                                  backgroundColor: "rgba(124, 77, 255, 0.08)",
+                                },
+                              }}
+                            />
+                          ))}
+                        </RadioGroup>
+                      </FormControl>
+                    ) : (
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <TextField
+                          key={questionId}
+                          label="Deine Antwort"
+                          variant="outlined"
+                          value={answerInput}
+                          onChange={(e) => setAnswerInput(e.target.value)}
+                          autoComplete="off"
+                          fullWidth
                         />
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          size="large"
+                          startIcon={<SaveIcon />}
+                          onClick={() => handleSaveAnswer()}
+                          disabled={saving}
+                          fullWidth
+                        >
+                          {saving ? <CircularProgress size={24} color="inherit" /> : "Antwort speichern"}
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
                 ) : (
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <TextField
-                      key={questionId}
-                      label="Deine Antwort"
-                      variant="outlined"
-                      value={answerInput}
-                      onChange={(e) => setAnswerInput(e.target.value)}
-                      autoComplete="off"
-                      fullWidth
-                    />
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      size="large"
-                      startIcon={<SaveIcon />}
-                      onClick={() => handleSaveAnswer()}
-                      disabled={saving}
-                      fullWidth
-                    >
-                      {saving ? <CircularProgress size={24} color="inherit" /> : "Antwort absenden"}
-                    </Button>
+                  <Box sx={{ mt: 2, p: 2, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.04)", border: "1px dashed rgba(255, 255, 255, 0.1)" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {!isRoundActive
+                        ? "Runde geschlossen. Antwort kann nicht mehr geändert werden."
+                        : "Frage gesperrt."}
+                    </Typography>
+                    {existingAnswer && (
+                      <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 600 }}>
+                        Eingereichte Antwort: {existingAnswer.answerText}
+                      </Typography>
+                    )}
                   </Box>
                 )}
-              </Box>
-            ) : (
-              <Box sx={{ mt: 2, p: 2, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.04)", border: "1px dashed rgba(255, 255, 255, 0.1)" }}>
-                <Typography variant="body2" color="text.secondary">
-                  {!isRoundActive
-                    ? "Runde geschlossen. Antwort kann nicht mehr geändert werden."
-                    : "Frage gesperrt."}
-                </Typography>
-                {existingAnswer && (
-                  <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 600 }}>
-                    Eingereichte Antwort: {existingAnswer.answerText}
-                  </Typography>
-                )}
-              </Box>
+              </>
             )}
           </CardContent>
         </Card>

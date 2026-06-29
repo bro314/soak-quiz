@@ -76,8 +76,7 @@ test.describe('Issue 6: Status validation phase although no answer is left to va
     await teamPage.click('text="Frage 1: Q1 MC"');
     await expect(teamPage.locator('h1')).toContainText('Q1 MC');
     await teamPage.click('text="Choice B"');
-    await expect(teamPage.locator('text=Antwort gespeichert.')).toBeVisible();
-    await teamPage.click('text="Zurück zur Runde"');
+    await expect(teamPage.locator('h1')).toContainText('Runde 1: Round 1');
 
     // Admin: Go back to Event Dashboard
     await adminPage.click('text="Zurück zum Dashboard"');

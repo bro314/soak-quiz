@@ -150,16 +150,26 @@ test.describe('SoAk Quiz App E2E', () => {
     await teamAPage.click('text="Frage 1: Q1 MC"');
     await expect(teamAPage.locator('h1')).toContainText('Q1 MC');
     await teamAPage.click('text="Choice B"');
-    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    
+    // Automatically navigates to Q2
+    await expect(teamAPage.locator('h1')).toContainText('Q2 FT');
+
+    // Go back to Q1 to change answer
+    await teamAPage.click('text="Vorherige"');
+    await expect(teamAPage.locator('h1')).toContainText('Q1 MC');
     
     // Change answer on MC question to Choice C
     await teamAPage.click('text="Choice C"');
-    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await expect(teamAPage.locator('h1')).toContainText('Q2 FT');
 
-    // Change answer on MC question back to Choice B
+    // Go back to Q1 to change answer back to Choice B
+    await teamAPage.click('text="Vorherige"');
+    await expect(teamAPage.locator('h1')).toContainText('Q1 MC');
     await teamAPage.click('text="Choice B"');
-    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await expect(teamAPage.locator('h1')).toContainText('Q2 FT');
+
     await teamAPage.click('text="Zurück zur Runde"');
+    await expect(teamAPage.locator('text=Beantwortet: Choice B')).toBeVisible();
 
     // 24. Team B: Open Round 1 and Answer Question 1 (Incorrect: Choice C)
     await teamBPage.click('a:has-text("Round 1")');
@@ -167,8 +177,9 @@ test.describe('SoAk Quiz App E2E', () => {
     await teamBPage.click('text="Frage 1: Q1 MC"');
     await expect(teamBPage.locator('h1')).toContainText('Q1 MC');
     await teamBPage.click('text="Choice C"');
-    await expect(teamBPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await expect(teamBPage.locator('h1')).toContainText('Q2 FT');
     await teamBPage.click('text="Zurück zur Runde"');
+    await expect(teamBPage.locator('text=Beantwortet: Choice C')).toBeVisible();
 
     // 25. Admin: Activate Question 2 (Free Text)
     await adminPage.locator('tr:has-text("Q2 FT")').click();
@@ -183,17 +194,17 @@ test.describe('SoAk Quiz App E2E', () => {
     // Reproduction test: Verify the input is currently empty and does not contain "Choice B" from Q1!
     await expect(teamAPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('');
     await teamAPage.fill('label:has-text("Deine Antwort") + div input', '   munich!!  ');
-    await teamAPage.click('button:has-text("Antwort absenden")');
-    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await teamAPage.click('button:has-text("Antwort speichern")');
+    await expect(teamAPage.locator('h1')).toContainText('Runde 1: Round 1');
+    await expect(teamAPage.locator('text=Beantwortet:    munich!!  ')).toBeVisible();
 
     // Re-enter and edit answer
-    await teamAPage.click('text="Zurück zur Runde"');
     await teamAPage.click('text="Frage 2: Q2 FT"');
     await expect(teamAPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('   munich!!  ');
     await teamAPage.fill('label:has-text("Deine Antwort") + div input', '  mUnIcH  ');
-    await teamAPage.click('button:has-text("Antwort absenden")');
-    await expect(teamAPage.locator('text=Antwort gespeichert.')).toBeVisible();
-    await teamAPage.click('text="Zurück zur Runde"');
+    await teamAPage.click('button:has-text("Antwort speichern")');
+    await expect(teamAPage.locator('h1')).toContainText('Runde 1: Round 1');
+    await expect(teamAPage.locator('text=Beantwortet:   mUnIcH  ')).toBeVisible();
 
     // 27. Team B: Answer Question 2 (Incorrect: Berlin)
     await teamBPage.click('text="Frage 2: Q2 FT"');
@@ -201,10 +212,9 @@ test.describe('SoAk Quiz App E2E', () => {
     // Reproduction test: Verify the input is currently empty and does not contain "Choice C" from Q1!
     await expect(teamBPage.locator('label:has-text("Deine Antwort") + div input')).toHaveValue('');
     await teamBPage.fill('label:has-text("Deine Antwort") + div input', 'Berlin');
-
-    await teamBPage.click('button:has-text("Antwort absenden")');
-    await expect(teamBPage.locator('text=Antwort gespeichert.')).toBeVisible();
-    await teamBPage.click('text="Zurück zur Runde"');
+    await teamBPage.click('button:has-text("Antwort speichern")');
+    await expect(teamBPage.locator('h1')).toContainText('Runde 1: Round 1');
+    await expect(teamBPage.locator('text=Beantwortet: Berlin')).toBeVisible();
 
     // 28. Admin: Close Round 1
     await adminPage.click('text="Zurück zum Dashboard"');

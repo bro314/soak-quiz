@@ -174,11 +174,11 @@ export function RoundScreen() {
                           </Typography>
                         }
                         secondary={
-                          isQuestionActive
-                            ? isAnswered
-                              ? "Beantwortet"
-                              : "Offen"
-                            : "Gesperrt"
+                          isAnswered
+                            ? `Beantwortet: ${answers[qItem.id].answerText}`
+                            : isQuestionActive
+                              ? "Offen"
+                              : "Gesperrt"
                         }
                       />
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

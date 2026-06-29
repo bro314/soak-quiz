@@ -76,8 +76,7 @@ test.describe('Issue 7: Points are already shown although round is not closed', 
     await teamPage.click('text="Frage 1: Q1 MC"');
     await expect(teamPage.locator('h1')).toContainText('Q1 MC');
     await teamPage.click('text="Choice B"');
-    await expect(teamPage.locator('text=Antwort gespeichert.')).toBeVisible();
-    await teamPage.click('text="Zurück zur Runde"');
+    await expect(teamPage.locator('h1')).toContainText('Runde 1: Round 1');
     await teamPage.click('text="Zurück zur Übersicht"');
 
     // Wait for the Cloud Function to finish grading and updating scoreboard

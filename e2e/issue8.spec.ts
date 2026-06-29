@@ -73,8 +73,7 @@ test.describe('Issue 8: Phase ACTIVE automatically terminated when Validation li
     await teamPage.click('text="Frage 1: Q1 Free Text"');
     await expect(teamPage.locator('h1')).toContainText('Q1 Free Text');
     await teamPage.fill('textarea, input[type="text"]', 'my answer');
-    await teamPage.click('button:has-text("Antwort absenden")');
-    await expect(teamPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await teamPage.click('button:has-text("Antwort speichern")');
 
     // Admin: Go back to Event Dashboard, then to Validation Screen
     await adminPage.click('text="Zurück zum Dashboard"');

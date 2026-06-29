@@ -94,11 +94,9 @@ test.describe('Issue 9: Prefilled answers to Freitext questions', () => {
     
     // Type and submit answer for Q1
     await teamPage.fill('textarea, input[type="text"]', 'my answer 1');
-    await teamPage.click('button:has-text("Antwort absenden")');
-    await expect(teamPage.locator('text=Antwort gespeichert.')).toBeVisible();
+    await teamPage.click('button:has-text("Antwort speichern")');
 
-    // Navigate to Question 2 using "Nächste" button
-    await teamPage.click('text="Nächste"');
+    // Automatically navigates to Question 2
     await expect(teamPage.locator('h1')).toContainText('Q2 Free Text');
 
     // The input field for Q2 should be empty, not contain "my answer 1"
