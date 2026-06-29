@@ -12,6 +12,7 @@ import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 import CircularProgress from "@mui/material/CircularProgress";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -48,6 +49,13 @@ export function QuestionEditor() {
 
   const [saving, setSaving] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
+  // Snackbar toast state
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" | "info" }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   useEffect(() => {
     if (!eventId || !roundId || !questionId) return;
@@ -142,11 +150,10 @@ export function QuestionEditor() {
       await setDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${questionId}/secret/answer`), {
         correctAnswer: correct,
       });
-
-      alert("Frage erfolgreich gespeichert.");
+      setSnackbar({ open: true, message: "Frage erfolgreich gespeichert.", severity: "success" });
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Speichern: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Speichern: " + err.message, severity: "error" });
     } finally {
       setSaving(false);
     }
@@ -162,7 +169,7 @@ export function QuestionEditor() {
       navigate(`/admin/event/${eventId}/round/${roundId}`);
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Löschen: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Löschen: " + err.message, severity: "error" });
     }
   };
 
@@ -365,6 +372,22 @@ export function QuestionEditor() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </AdminLayout>
     </AdminRouteGuard>
   );

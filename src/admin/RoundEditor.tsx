@@ -20,6 +20,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
@@ -60,6 +61,13 @@ export function RoundEditor() {
 
   // Dialogs
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
+  // Snackbar toast state
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" | "info" }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   useEffect(() => {
     if (!eventId || !roundId) return;
@@ -142,9 +150,10 @@ export function RoundEditor() {
       await setDoc(doc(db, `events/${eventId}/rounds/${roundId}/detail/main`), {
         description: editDescription,
       });
+      setSnackbar({ open: true, message: "Runde erfolgreich gespeichert.", severity: "success" });
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Speichern: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Speichern: " + err.message, severity: "error" });
     } finally {
       setSavingRound(false);
     }
@@ -186,7 +195,7 @@ export function RoundEditor() {
       setQuestionTitle("");
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Erstellen der Frage: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Erstellen der Frage: " + err.message, severity: "error" });
     } finally {
       setCreateQuestionLoading(false);
     }
@@ -209,7 +218,7 @@ export function RoundEditor() {
       navigate(`/admin/event/${eventId}`);
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Löschen: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Löschen: " + err.message, severity: "error" });
     }
   };
 
@@ -222,7 +231,7 @@ export function RoundEditor() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
     }
   };
 
@@ -560,6 +569,22 @@ export function RoundEditor() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </AdminLayout>
     </AdminRouteGuard>
   );

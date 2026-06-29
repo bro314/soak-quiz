@@ -20,6 +20,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -54,6 +55,13 @@ export function EventDashboard() {
 
   // Dialog states
   const [openResetDialog, setOpenResetDialog] = useState(false);
+
+  // Snackbar toast state
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "warning" | "info" }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   useEffect(() => {
     if (!eventId) return;
@@ -112,7 +120,7 @@ export function EventDashboard() {
       await updateDoc(doc(db, `events/${eventId}`), { status });
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Aktualisieren des Event-Status: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Aktualisieren des Event-Status: " + err.message, severity: "error" });
     }
   };
 
@@ -146,7 +154,7 @@ export function EventDashboard() {
       setRoundDescription("");
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Erstellen der Runde: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Erstellen der Runde: " + err.message, severity: "error" });
     } finally {
       setCreateRoundLoading(false);
     }
@@ -157,13 +165,13 @@ export function EventDashboard() {
     // Check if there is already an active round
     const hasActiveRound = rounds.some((r) => r.status === "ACTIVE");
     if (hasActiveRound) {
-      alert("Es läuft bereits eine aktive Runde.");
+      setSnackbar({ open: true, message: "Es läuft bereits eine aktive Runde.", severity: "warning" });
       return;
     }
     // Find first round that is INACTIVE
     const nextRound = rounds.find((r) => r.status === "INACTIVE");
     if (!nextRound) {
-      alert("Keine inaktiven Runden mehr vorhanden.");
+      setSnackbar({ open: true, message: "Keine inaktiven Runden mehr vorhanden.", severity: "warning" });
       return;
     }
     try {
@@ -172,7 +180,7 @@ export function EventDashboard() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
     }
   };
 
@@ -181,7 +189,7 @@ export function EventDashboard() {
     // Find active round
     const activeRound = rounds.find((r) => r.status === "ACTIVE");
     if (!activeRound) {
-      alert("Es gibt momentan keine aktive Runde.");
+      setSnackbar({ open: true, message: "Es gibt momentan keine aktive Runde.", severity: "warning" });
       return;
     }
     try {
@@ -202,7 +210,7 @@ export function EventDashboard() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
     }
   };
 
@@ -210,7 +218,7 @@ export function EventDashboard() {
     if (!eventId) return;
     const validationRound = rounds.find((r) => r.status === "VALIDATION");
     if (!validationRound) {
-      alert("Es gibt momentan keine Runde in der Validierung.");
+      setSnackbar({ open: true, message: "Es gibt momentan keine Runde in der Validierung.", severity: "warning" });
       return;
     }
     try {
@@ -219,7 +227,7 @@ export function EventDashboard() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
     }
   };
 
@@ -247,10 +255,10 @@ export function EventDashboard() {
       batch.update(doc(db, `events/${eventId}`), { status: "INACTIVE" });
 
       await batch.commit();
-      alert("Event erfolgreich zurückgesetzt.");
+      setSnackbar({ open: true, message: "Event erfolgreich zurückgesetzt.", severity: "success" });
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Zurücksetzen des Events: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Zurücksetzen des Events: " + err.message, severity: "error" });
     }
   };
 
@@ -570,6 +578,22 @@ export function EventDashboard() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </AdminLayout>
     </AdminRouteGuard>
   );

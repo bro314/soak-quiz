@@ -21,6 +21,8 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import CheckIcon from "@mui/icons-material/Check";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import type { Answer, Question, Round } from "../types";
 
 export function ValidationScreen() {
@@ -37,6 +39,15 @@ export function ValidationScreen() {
   // Point modifications state
   const [editPoints, setEditPoints] = useState<{ [answerId: string]: string }>({});
   const [actionLoading, setActionLoading] = useState<{ [answerId: string]: boolean }>({});
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "error",
+  });
+
+  const handlePointsChange = (answerId: string, val: string) => {
+    setEditPoints((prev) => ({ ...prev, [answerId]: val }));
+  };
 
   useEffect(() => {
     if (!eventId) return;
@@ -146,7 +157,7 @@ export function ValidationScreen() {
     if (!eventId) return;
     const pts = Number(editPoints[ans.id]);
     if (isNaN(pts)) {
-      alert("Punkte müssen eine Zahl sein.");
+      setSnackbar({ open: true, message: "Punkte müssen eine Zahl sein.", severity: "error" });
       return;
     }
 
@@ -167,14 +178,10 @@ export function ValidationScreen() {
       }
     } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Validieren: " + err.message);
+      setSnackbar({ open: true, message: "Fehler beim Validieren: " + err.message, severity: "error" });
     } finally {
       setActionLoading((prev) => ({ ...prev, [ans.id]: false }));
     }
-  };
-
-  const handlePointsChange = (answerId: string, val: string) => {
-    setEditPoints((prev) => ({ ...prev, [answerId]: val }));
   };
 
   if (loading) {
@@ -233,6 +240,7 @@ export function ValidationScreen() {
                         const r = roundsMap.get(ans.roundId);
                         const correctAns = secretAnswersMap.get(cacheKey) || "";
                         const teamName = teamsMap.get(ans.teamId) || ans.teamId;
+                        const isPtsInvalid = isNaN(Number(editPoints[ans.id])) || editPoints[ans.id]?.trim() === "";
 
                         return (
                           <TableRow key={ans.id}>
@@ -257,6 +265,8 @@ export function ValidationScreen() {
                                 }}
                                 value={editPoints[ans.id] || ""}
                                 onChange={(e) => handlePointsChange(ans.id, e.target.value)}
+                                error={isPtsInvalid}
+                                helperText={isPtsInvalid ? "Ungültige Zahl" : ""}
                               />
                             </TableCell>
                             <TableCell align="right">
@@ -266,7 +276,7 @@ export function ValidationScreen() {
                                 size="small"
                                 startIcon={<CheckIcon />}
                                 onClick={() => handleValidate(ans)}
-                                disabled={actionLoading[ans.id]}
+                                disabled={actionLoading[ans.id] || isPtsInvalid}
                               >
                                 {actionLoading[ans.id] ? <CircularProgress size={20} /> : "OK"}
                               </Button>
@@ -280,6 +290,21 @@ export function ValidationScreen() {
               )}
             </CardContent>
           </Card>
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={6000}
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          >
+            <Alert
+              onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+              severity={snackbar.severity}
+              variant="filled"
+              sx={{ width: "100%" }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
         </Container>
       </AdminLayout>
     </AdminRouteGuard>
