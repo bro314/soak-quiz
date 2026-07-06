@@ -126,10 +126,29 @@ export function EventHomeScreen() {
     );
   }
 
-  // Calculate placement
-  const placementIndex = scoreboardList.findIndex((s) => s.teamId === teamId);
+  // Calculate placement and total points based only on DONE rounds to avoid spoilers
+  const doneRoundIds = new Set(
+    rounds.filter((r) => r.status === "DONE").map((r) => r.id)
+  );
+
+  const getDoneTotal = (score: Scoreboard | null) => {
+    if (!score || !score.perRound) return 0;
+    return Object.entries(score.perRound).reduce((sum, [rId, pts]) => {
+      if (doneRoundIds.has(rId)) {
+        return sum + (Number(pts) || 0);
+      }
+      return sum;
+    }, 0);
+  };
+
+  const sortedScoreboardList = [...scoreboardList].sort(
+    (a, b) => getDoneTotal(b) - getDoneTotal(a)
+  );
+
+  const placementIndex = sortedScoreboardList.findIndex((s) => s.teamId === teamId);
   const placement = placementIndex !== -1 ? placementIndex + 1 : null;
-  const totalRankedTeams = scoreboardList.length;
+  const totalRankedTeams = sortedScoreboardList.length;
+  const displayTotal = teamScore ? getDoneTotal(teamScore) : 0;
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
@@ -174,7 +193,7 @@ export function EventHomeScreen() {
                 Platz {placement} von {totalRankedTeams}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Gesamtpunkte: {teamScore?.total || 0}
+                Gesamtpunkte: {displayTotal}
               </Typography>
             </Box>
           </CardContent>
