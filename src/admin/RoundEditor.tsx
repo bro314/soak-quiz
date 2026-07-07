@@ -470,7 +470,7 @@ export function RoundEditor() {
                             <TableCell sx={{ fontWeight: 700 }}>Team Name</TableCell>
                             {questions.map((q) => (
                               <TableCell key={q.id} align="right" sx={{ fontWeight: 700 }}>
-                                F{getQuestionLetter(q.number)}
+                                {getQuestionLetter(q.number)}
                               </TableCell>
                             ))}
                             <TableCell align="right" sx={{ fontWeight: 700 }}>

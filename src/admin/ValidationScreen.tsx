@@ -260,7 +260,7 @@ export function ValidationScreen() {
                         return (
                           <TableRow key={ans.id}>
                             <TableCell>
-                              R{r?.number || "—"} / F{q?.number ? getQuestionLetter(q.number) : "—"}
+                              R{r?.number || "—"} / {q?.number ? getQuestionLetter(q.number) : "—"}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{q?.title || "Frage wird geladen..."}</TableCell>
                             <TableCell color="text.secondary">{correctAns}</TableCell>
