@@ -182,6 +182,11 @@ export function RoundScreen() {
                         }
                       />
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {round?.status === "DONE" && (
+                          <Typography variant="body1" sx={{ fontWeight: 700, mr: 1 }}>
+                            {answers[qItem.id]?.points ?? 0} Pkt.
+                          </Typography>
+                        )}
                         {isAnswered && <CheckCircleIcon color="success" />}
                         {!isAnswered && isQuestionActive && <HelpIcon color="secondary" />}
                         {!isQuestionActive && <LockIcon color="disabled" />}
