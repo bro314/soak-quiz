@@ -31,6 +31,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import Radio from "@mui/material/Radio";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import type { Round, Question, Team, Answer, Event } from "../types";
@@ -234,6 +235,25 @@ export function RoundEditor() {
     }
   };
 
+  const nextQuestion = questions.find((q) => q.status === "INACTIVE");
+
+  const handleStartNextQuestion = async () => {
+    if (!eventId || !roundId) return;
+    const nextQ = questions.find((q) => q.status === "INACTIVE");
+    if (!nextQ) {
+      setSnackbar({ open: true, message: "Keine inaktiven Fragen mehr vorhanden.", severity: "warning" });
+      return;
+    }
+    try {
+      await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${nextQ.id}`), {
+        status: "ACTIVE",
+      });
+    } catch (err: any) {
+      console.error(err);
+      setSnackbar({ open: true, message: err.message, severity: "error" });
+    }
+  };
+
   if (loading) {
     return (
       <AdminRouteGuard>
@@ -278,7 +298,22 @@ export function RoundEditor() {
             <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
               Runde {round.number}: {round.title}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              {event?.status === "ACTIVE" && round.status === "ACTIVE" && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<PlayArrowIcon />}
+                  onClick={handleStartNextQuestion}
+                  disabled={!nextQuestion}
+                >
+                  {nextQuestion ? (
+                    <>Nächste Frage starten (Frage {nextQuestion.number})</>
+                  ) : (
+                    "Nächste Frage starten"
+                  )}
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 color="primary"
