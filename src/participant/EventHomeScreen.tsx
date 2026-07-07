@@ -13,6 +13,13 @@ import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
+import TableContainer from "@mui/material/TableContainer";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import TableBody from "@mui/material/TableBody";
+import Paper from "@mui/material/Paper";
 import ListItemButton from "@mui/material/ListItemButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -32,6 +39,7 @@ export function EventHomeScreen() {
   const [scoreboardList, setScoreboardList] = useState<Scoreboard[]>([]);
   const [teamScore, setTeamScore] = useState<Scoreboard | null>(null);
   const [teamName, setTeamName] = useState("");
+  const [teamsMap, setTeamsMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   // Unauthorized if role is not team or eventId does not match
@@ -99,12 +107,23 @@ export function EventHomeScreen() {
       setLoading(false);
     });
 
+    // Listen to all teams for names
+    const teamsRef = collection(db, "events", eventId, "teams");
+    const unsubTeams = onSnapshot(teamsRef, (snapshot) => {
+      const map = new Map<string, string>();
+      snapshot.forEach((d) => {
+        map.set(d.id, d.data().name);
+      });
+      setTeamsMap(map);
+    });
+
     return () => {
       unsubEvent();
       unsubTeam();
       unsubRounds();
       unsubOwnScore();
       unsubScoreboard();
+      unsubTeams();
     };
   }, [eventId, teamId, isAuthorized]);
 
@@ -208,6 +227,40 @@ export function EventHomeScreen() {
             </Box>
           </CardContent>
         </Card>
+      )}
+
+      {event?.status === "INACTIVE" && sortedScoreboardList.some((s) => getDoneTotal(s) > 0) && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+            Spielstand
+          </Typography>
+          <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>Team Name</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Punkte</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedScoreboardList.map((s) => {
+                  const teamName = teamsMap.get(s.teamId) || s.teamId;
+                  const pts = getDoneTotal(s);
+                  return (
+                    <TableRow key={s.teamId}>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
+                        {teamName}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: "secondary.main" }}>
+                        {pts}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       )}
 
 
