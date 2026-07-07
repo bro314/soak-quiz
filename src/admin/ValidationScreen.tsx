@@ -81,6 +81,18 @@ export function ValidationScreen() {
           list.push({ id: d.id, ...data } as Answer);
         }
       });
+
+      const getTime = (ts: any) => {
+        if (!ts) return 0;
+        if (typeof ts.toMillis === "function") return ts.toMillis();
+        if (typeof ts.seconds === "number") return ts.seconds * 1000 + (ts.nanoseconds || 0) / 1000000;
+        if (ts instanceof Date) return ts.getTime();
+        if (typeof ts === "number") return ts;
+        if (typeof ts === "string") return new Date(ts).getTime();
+        return 0;
+      };
+
+      list.sort((a, b) => getTime(a.submittedAt) - getTime(b.submittedAt));
       setAnswers(list);
       setLoading(false);
     });
