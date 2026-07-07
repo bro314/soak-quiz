@@ -479,8 +479,17 @@ export function RoundEditor() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {teams.map((team) => (
-                            <TableRow key={team.id}>
+                          {[...teams]
+                            .sort((a, b) => {
+                              const scoreA = questions.reduce((sum, q) => sum + (answerMap.get(`${a.id}__${roundId}__${q.id}`)?.points ?? 0), 0);
+                              const scoreB = questions.reduce((sum, q) => sum + (answerMap.get(`${b.id}__${roundId}__${q.id}`)?.points ?? 0), 0);
+                              if (scoreB !== scoreA) {
+                                return scoreB - scoreA;
+                              }
+                              return a.name.localeCompare(b.name);
+                            })
+                            .map((team) => (
+                              <TableRow key={team.id}>
                               <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
                                 {team.name}
                               </TableCell>

@@ -638,9 +638,18 @@ export function EventDashboard() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {teams.map((team) => {
-                            const score = scoreboardMap.get(team.id);
-                            return (
+                          {[...teams]
+                            .sort((a, b) => {
+                              const scoreA = scoreboardMap.get(a.id)?.total ?? 0;
+                              const scoreB = scoreboardMap.get(b.id)?.total ?? 0;
+                              if (scoreB !== scoreA) {
+                                return scoreB - scoreA;
+                              }
+                              return a.name.localeCompare(b.name);
+                            })
+                            .map((team) => {
+                              const score = scoreboardMap.get(team.id);
+                              return (
                               <TableRow key={team.id}>
                                 <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
                                   {team.name}
