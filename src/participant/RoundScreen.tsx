@@ -82,20 +82,6 @@ export function RoundScreen() {
       }
     });
 
-    // Listen to round details main document
-    const detailRef = doc(db, "events", eventId, "rounds", roundId, "detail", "main");
-    const unsubDetail = onSnapshot(
-      detailRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setDetail(docSnap.data() as RoundDetail);
-        }
-      },
-      (err) => {
-        console.warn("Could not read round detail (expected if round is inactive).", err);
-      }
-    );
-
     // Listen to questions in round
     const questionsRef = collection(db, "events", eventId, "rounds", roundId, "questions");
     const unsubQuestions = onSnapshot(questionsRef, (snapshot) => {
@@ -128,11 +114,35 @@ export function RoundScreen() {
 
     return () => {
       unsubRound();
-      unsubDetail();
       unsubQuestions();
       unsubAnswers();
     };
   }, [eventId, roundId, teamId, isAuthorized]);
+
+  // Listen to round details main document (only accessible if active/done)
+  useEffect(() => {
+    if (!eventId || !roundId || !isAuthorized || round?.status === "INACTIVE") {
+      setDetail(null);
+      return;
+    }
+
+    const detailRef = doc(db, "events", eventId, "rounds", roundId, "detail", "main");
+    const unsubDetail = onSnapshot(
+      detailRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setDetail(docSnap.data() as RoundDetail);
+        }
+      },
+      (err) => {
+        console.warn("Could not read round detail (expected if round is inactive).", err);
+      }
+    );
+
+    return () => {
+      unsubDetail();
+    };
+  }, [eventId, roundId, isAuthorized, round?.status]);
 
   if (claimsLoading || loading) {
     return (

@@ -95,22 +95,6 @@ export function QuestionScreen() {
       }
     });
 
-    // Listen to question details (only accessible if active)
-    const detailRef = doc(db, "events", eventId, "rounds", roundId, "questions", questionId, "detail", "main");
-    const unsubDetail = onSnapshot(
-      detailRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setDetail(docSnap.data() as QuestionDetail);
-        }
-        setLoading(false);
-      },
-      (err) => {
-        console.warn("Could not read question detail (expected if inactive).", err);
-        setLoading(false);
-      }
-    );
-
     // Listen to our existing answer
     const answerRef = doc(db, "events", eventId, "answers", `${teamId}__${roundId}__${questionId}`);
     const unsubAnswer = onSnapshot(answerRef, (docSnap) => {
@@ -127,10 +111,36 @@ export function QuestionScreen() {
     return () => {
       unsubRound();
       unsubQuestion();
-      unsubDetail();
       unsubAnswer();
     };
   }, [eventId, roundId, questionId, teamId, isAuthorized]);
+
+  // Listen to question details (only accessible if active)
+  useEffect(() => {
+    if (!eventId || !roundId || !questionId || !isAuthorized || question?.status !== "ACTIVE") {
+      setDetail(null);
+      return;
+    }
+
+    const detailRef = doc(db, "events", eventId, "rounds", roundId, "questions", questionId, "detail", "main");
+    const unsubDetail = onSnapshot(
+      detailRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setDetail(docSnap.data() as QuestionDetail);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn("Could not read question detail (expected if inactive).", err);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubDetail();
+    };
+  }, [eventId, roundId, questionId, isAuthorized, question?.status]);
 
   // Parse answer input as list of selected answers for checkboxes
   const selectedAnswers = answerInput ? answerInput.split(",").map((s) => s.trim()) : [];
