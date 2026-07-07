@@ -184,15 +184,25 @@ export function EventHomeScreen() {
         </Box>
       </Box>
 
-      {placement && (
+      {event?.status === "INACTIVE" ? (
+        placement && (
+          <Card className="glass" sx={{ mb: 4, background: "linear-gradient(135deg, rgba(124, 77, 255, 0.15) 0%, rgba(0, 229, 255, 0.05) 100%)" }}>
+            <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, py: 3 }}>
+              <EmojiEventsIcon sx={{ fontSize: 40, color: "#FFD740" }} />
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 750 }}>
+                  Platz {placement} von {totalRankedTeams}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        )
+      ) : (
         <Card className="glass" sx={{ mb: 4, background: "linear-gradient(135deg, rgba(124, 77, 255, 0.15) 0%, rgba(0, 229, 255, 0.05) 100%)" }}>
           <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, py: 3 }}>
             <EmojiEventsIcon sx={{ fontSize: 40, color: "#FFD740" }} />
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 750 }}>
-                Platz {placement} von {totalRankedTeams}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
                 Gesamtpunkte: {displayTotal}
               </Typography>
             </Box>
