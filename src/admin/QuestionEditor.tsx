@@ -24,6 +24,8 @@ import Grid from "@mui/material/Grid";
 import Radio from "@mui/material/Radio";
 import Checkbox from "@mui/material/Checkbox";
 import type { Question, QuestionDetail, QuestionSecretAnswer } from "../types";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function QuestionEditor() {
   const { eventId, roundId, questionId } = useParams<{ eventId: string; roundId: string; questionId: string }>();
@@ -234,7 +236,7 @@ export function QuestionEditor() {
 
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
             <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-              Frage {question.number} bearbeiten
+              Frage {getQuestionLetter(question.number)} bearbeiten
             </Typography>
             <Button
               variant="outlined"

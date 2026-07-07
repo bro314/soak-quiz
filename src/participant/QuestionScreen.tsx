@@ -21,7 +21,9 @@ import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormControl from "@mui/material/FormControl";
-import Checkbox from "@mui/material/Checkbox";
+import { Checkbox } from "@mui/material";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function QuestionScreen() {
   const { eventId, roundId, questionId } = useParams<{ eventId: string; roundId: string; questionId: string }>();
@@ -239,7 +241,7 @@ export function QuestionScreen() {
         <Card className="glass" sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="caption" color="secondary" sx={{ fontWeight: 650, display: "block", mb: 1 }}>
-              Runde {round?.number} • Frage {question.number}
+              Runde {round?.number} • Frage {getQuestionLetter(question.number)}
             </Typography>
             <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 800, mb: isQuestionActive ? 3 : 0 }}>
               {question.title}

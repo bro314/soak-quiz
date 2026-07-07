@@ -19,6 +19,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LockIcon from "@mui/icons-material/Lock";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HelpIcon from "@mui/icons-material/Help";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function RoundScreen() {
   const { eventId, roundId } = useParams<{ eventId: string; roundId: string }>();
@@ -200,7 +202,7 @@ export function RoundScreen() {
                       <ListItemText
                         primary={
                           <Typography sx={{ fontWeight: 650 }}>
-                            Frage {qItem.number}: {qItem.title}
+                            Frage {getQuestionLetter(qItem.number)}: {qItem.title}
                           </Typography>
                         }
                         secondary={

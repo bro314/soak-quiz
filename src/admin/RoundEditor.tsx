@@ -35,6 +35,8 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import Radio from "@mui/material/Radio";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import type { Round, Question, Team, Answer, Event } from "../types";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function RoundEditor() {
   const { eventId, roundId } = useParams<{ eventId: string; roundId: string }>();
@@ -308,7 +310,7 @@ export function RoundEditor() {
                   disabled={!nextQuestion}
                 >
                   {nextQuestion ? (
-                    <>Nächste Frage starten (Frage {nextQuestion.number})</>
+                    <>Nächste Frage starten (Frage {getQuestionLetter(nextQuestion.number)})</>
                   ) : (
                     "Nächste Frage starten"
                   )}
@@ -362,7 +364,7 @@ export function RoundEditor() {
                                sx={{ cursor: "pointer" }}
                                onClick={() => navigate(`/admin/event/${eventId}/round/${roundId}/question/${q.id}`)}
                              >
-                               <TableCell>{q.number}</TableCell>
+                               <TableCell>{getQuestionLetter(q.number)}</TableCell>
                                <TableCell style={{ fontWeight: 600 }}>{q.title}</TableCell>
                                <TableCell>
                                  <Chip
@@ -468,7 +470,7 @@ export function RoundEditor() {
                             <TableCell sx={{ fontWeight: 700 }}>Team Name</TableCell>
                             {questions.map((q) => (
                               <TableCell key={q.id} align="right" sx={{ fontWeight: 700 }}>
-                                F{q.number}
+                                F{getQuestionLetter(q.number)}
                               </TableCell>
                             ))}
                             <TableCell align="right" sx={{ fontWeight: 700 }}>

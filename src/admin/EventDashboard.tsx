@@ -35,6 +35,8 @@ import SkipNextIcon from "@mui/icons-material/SkipNext";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 import type { Event, Round, Team, Scoreboard, Question } from "../types";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function EventDashboard() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -465,7 +467,7 @@ export function EventDashboard() {
                       <>
                         Nächste Frage starten
                         <br />
-                        (Frage {nextQuestion.number}: {nextQuestion.title})
+                        (Frage {getQuestionLetter(nextQuestion.number)}: {nextQuestion.title})
                       </>
                     ) : (
                       "Nächste Frage starten"

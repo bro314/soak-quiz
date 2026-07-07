@@ -24,6 +24,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import type { Answer, Question, Round } from "../types";
+import { getQuestionLetter } from "../utils/question";
+
 
 export function ValidationScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -258,7 +260,7 @@ export function ValidationScreen() {
                         return (
                           <TableRow key={ans.id}>
                             <TableCell>
-                              R{r?.number || "—"} / F{q?.number || "—"}
+                              R{r?.number || "—"} / F{q?.number ? getQuestionLetter(q.number) : "—"}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{q?.title || "Frage wird geladen..."}</TableCell>
                             <TableCell color="text.secondary">{correctAns}</TableCell>
