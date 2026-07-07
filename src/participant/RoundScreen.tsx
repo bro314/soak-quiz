@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { doc, collection, onSnapshot, query, where, updateDoc } from "firebase/firestore";
+import { doc, collection, onSnapshot, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useClaims } from "../hooks/useClaims";
 import type { Round, RoundDetail, Question, Answer } from "../types";
@@ -48,6 +48,7 @@ export function RoundScreen() {
       await updateDoc(answerRef, {
         points: 0,
         validated: false,
+        submittedAt: serverTimestamp(),
       });
     } catch (err: any) {
       console.error("Error challenging answer", err);
