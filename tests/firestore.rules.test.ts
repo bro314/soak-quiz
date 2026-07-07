@@ -324,6 +324,46 @@ describe('Firestore Security Rules', () => {
         })
       );
     });
+
+    it('allows team to challenge their own answer (reset points and validated) even in DONE or VALIDATION rounds', async () => {
+      const eventId = 'event_123';
+      const adminDb = getAdminClient(eventId);
+      const teamAId = 'teamA';
+      const teamDb = getTeamClient(teamAId, eventId);
+
+      // Seed a DONE round and a question
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round_done`), { number: 1, title: 'Done Round', status: 'DONE' });
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round_done/questions/q1`), { number: 1, type: 'FREE_TEXT', title: 'Q1', status: 'ACTIVE' });
+
+      // Seed an answer with points/validated as admin
+      const answerDocRef = doc(teamDb, `events/${eventId}/answers/${teamAId}__round_done__q1`);
+      const adminAnswerRef = doc(adminDb, `events/${eventId}/answers/${teamAId}__round_done__q1`);
+      await setDoc(adminAnswerRef, {
+        teamId: teamAId,
+        roundId: 'round_done',
+        questionId: 'q1',
+        answerText: 'Paris',
+        submittedAt: new Date(),
+        points: 5,
+        validated: true,
+      });
+
+      // Team tries to update answer text in DONE round -> Fails
+      await assertFails(
+        updateDoc(answerDocRef, {
+          answerText: 'London',
+          submittedAt: new Date(),
+        })
+      );
+
+      // Team challenges / resets own answer points/validated -> Succeeds
+      await assertSucceeds(
+        updateDoc(answerDocRef, {
+          points: 0,
+          validated: false,
+        })
+      );
+    });
   });
 
   describe('Invariant 10: Team can submit answers across rounds with same questionId', () => {

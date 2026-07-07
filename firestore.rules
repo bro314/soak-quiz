@@ -266,20 +266,23 @@ service cloud.firestore {
           (
             isTeam(eventId, resource.data.teamId) &&
             isValidAnswer(request.resource.data) &&
-            // Prevent modifying grading fields unless resetting to 0/false
-            (
-              (request.resource.data.points == resource.data.points &&
-               request.resource.data.validated == resource.data.validated) ||
-              (request.resource.data.points == 0 &&
-               request.resource.data.validated == false)
-            ) &&
-            // Check immutable metadata fields
             request.resource.data.teamId == resource.data.teamId &&
             request.resource.data.roundId == resource.data.roundId &&
             request.resource.data.questionId == resource.data.questionId &&
-            // Check that the question is active and round is active
-            getQuestion(eventId, resource.data.roundId, resource.data.questionId).status == 'ACTIVE' &&
-            !(getRound(eventId, resource.data.roundId).status in ['VALIDATION', 'DONE', 'INACTIVE'])
+            (
+              // Case 1: Normal answer update (only when round is active, question is active, points/validated unchanged)
+              (
+                !(getRound(eventId, resource.data.roundId).status in ['VALIDATION', 'DONE', 'INACTIVE']) &&
+                getQuestion(eventId, resource.data.roundId, resource.data.questionId).status == 'ACTIVE' &&
+                request.resource.data.points == resource.data.points &&
+                request.resource.data.validated == resource.data.validated
+              ) ||
+              // Case 2: Challenge/reset answer (can reset points to 0 and validated to false at any time)
+              (
+                request.resource.data.points == 0 &&
+                request.resource.data.validated == false
+              )
+            )
           )
         );
 

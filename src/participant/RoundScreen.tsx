@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { doc, collection, onSnapshot, query, where } from "firebase/firestore";
+import { doc, collection, onSnapshot, query, where, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useClaims } from "../hooks/useClaims";
 import type { Round, RoundDetail, Question, Answer } from "../types";
@@ -31,9 +31,29 @@ export function RoundScreen() {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [challenging, setChallenging] = useState<Record<string, boolean>>({});
 
   const isAuthorized = claims.role === "team" && claims.eventId === eventId;
   const teamId = claims.teamId;
+
+  const handleChallenge = async (questionId: string) => {
+    if (!eventId || !teamId || !roundId) return;
+    setChallenging(prev => ({ ...prev, [questionId]: true }));
+    setError("");
+    try {
+      const answerId = `${teamId}__${roundId}__${questionId}`;
+      const answerRef = doc(db, "events", eventId, "answers", answerId);
+      await updateDoc(answerRef, {
+        points: 0,
+        validated: false,
+      });
+    } catch (err: any) {
+      console.error("Error challenging answer", err);
+      setError("Fehler beim Einreichen des Einspruchs.");
+    } finally {
+      setChallenging(prev => ({ ...prev, [questionId]: false }));
+    }
+  };
 
   useEffect(() => {
     if (claimsLoading) return;
@@ -181,15 +201,41 @@ export function RoundScreen() {
                               : "Gesperrt"
                         }
                       />
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {round?.status === "DONE" && (
-                          <Typography variant="body1" sx={{ fontWeight: 700, mr: 1 }}>
-                            {answers[qItem.id]?.points ?? 0} Pkt.
-                          </Typography>
+                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          {round?.status === "DONE" && (
+                            <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                              {answers[qItem.id]?.points ?? 0} Pkt.
+                            </Typography>
+                          )}
+                          {isAnswered && <CheckCircleIcon color="success" />}
+                          {!isAnswered && isQuestionActive && <HelpIcon color="secondary" />}
+                          {!isQuestionActive && <LockIcon color="disabled" />}
+                        </Box>
+                        {round?.status === "DONE" && isAnswered && (
+                          <Box>
+                            {answers[qItem.id]?.validated === false ? (
+                              <Typography variant="caption" sx={{ color: "warning.main", fontWeight: 650 }}>
+                                In Prüfung
+                              </Typography>
+                            ) : (
+                              <Button
+                                size="small"
+                                variant="text"
+                                color="warning"
+                                sx={{ py: 0, minWidth: 0, textTransform: "none", fontSize: "0.75rem", fontWeight: 650 }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleChallenge(qItem.id);
+                                }}
+                                disabled={challenging[qItem.id]}
+                              >
+                                Einspruch
+                              </Button>
+                            )}
+                          </Box>
                         )}
-                        {isAnswered && <CheckCircleIcon color="success" />}
-                        {!isAnswered && isQuestionActive && <HelpIcon color="secondary" />}
-                        {!isQuestionActive && <LockIcon color="disabled" />}
                       </Box>
                     </ListItemButton>
                   </ListItem>
