@@ -277,7 +277,7 @@ async function gradeAnswer(eventId: string, answerId: string, answerData: any) {
   let points = 0;
   let validated = false;
 
-  if (questionData.type === "MULTIPLE_CHOICE") {
+  if (questionData.type === "MULTIPLE_CHOICE" || questionData.type === "SINGLE_CHOICE") {
     points = answerText === correctAnswer ? 1 : 0;
     validated = true;
   } else if (questionData.type === "FREE_TEXT") {

@@ -158,7 +158,7 @@ service cloud.firestore {
       return hasRequiredFields(data, ['number', 'type', 'title', 'status']) &&
              hasOnlyAllowedFields(data, ['number', 'type', 'title', 'status']) &&
              data.number is number && data.number > 0 &&
-             data.type in ['MULTIPLE_CHOICE', 'FREE_TEXT'] &&
+             data.type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'FREE_TEXT'] &&
              data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
              data.status in ['INACTIVE', 'ACTIVE'];
     }

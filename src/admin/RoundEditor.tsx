@@ -57,7 +57,7 @@ export function RoundEditor() {
 
   // Create Question form state
   const [questionTitle, setQuestionTitle] = useState("");
-  const [questionType, setQuestionType] = useState<Question["type"]>("MULTIPLE_CHOICE");
+  const [questionType, setQuestionType] = useState<Question["type"]>("SINGLE_CHOICE");
   const [createQuestionLoading, setCreateQuestionLoading] = useState(false);
 
   // Dialogs
@@ -196,7 +196,7 @@ export function RoundEditor() {
 
       await setDoc(detailRef, {
         content: "",
-        possibleAnswers: questionType === "MULTIPLE_CHOICE" ? ["", "", "", "", ""] : [],
+        possibleAnswers: (questionType === "MULTIPLE_CHOICE" || questionType === "SINGLE_CHOICE") ? ["", "", "", "", ""] : [],
       });
 
       await setDoc(secretRef, {
@@ -369,6 +369,15 @@ export function RoundEditor() {
                         <Typography variant="body2" color="text.secondary" gutterBottom>
                           Fragentyp:
                         </Typography>
+                        <FormControlLabel
+                          control={
+                            <Radio
+                              checked={questionType === "SINGLE_CHOICE"}
+                              onChange={() => setQuestionType("SINGLE_CHOICE")}
+                            />
+                          }
+                          label="Single Choice"
+                        />
                         <FormControlLabel
                           control={
                             <Radio

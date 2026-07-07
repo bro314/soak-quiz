@@ -89,7 +89,7 @@ describe("Grading & Aggregation (F2)", () => {
     const mcQuestionId = "q-mc";
     await adminDb.doc(`events/${eventId}/rounds/${roundId}/questions/${mcQuestionId}`).set({
       number: 1,
-      type: "MULTIPLE_CHOICE",
+      type: "SINGLE_CHOICE",
       title: "MC Question",
       status: "ACTIVE",
     });
@@ -97,9 +97,20 @@ describe("Grading & Aggregation (F2)", () => {
       correctAnswer: "B",
     });
 
+    const multiMcQuestionId = "q-multi-mc";
+    await adminDb.doc(`events/${eventId}/rounds/${roundId}/questions/${multiMcQuestionId}`).set({
+      number: 2,
+      type: "MULTIPLE_CHOICE",
+      title: "Multi MC Question",
+      status: "ACTIVE",
+    });
+    await adminDb.doc(`events/${eventId}/rounds/${roundId}/questions/${multiMcQuestionId}/secret/answer`).set({
+      correctAnswer: "A,C",
+    });
+
     const ftQuestionId = "q-ft";
     await adminDb.doc(`events/${eventId}/rounds/${roundId}/questions/${ftQuestionId}`).set({
-      number: 2,
+      number: 3,
       type: "FREE_TEXT",
       title: "Free Text Question",
       status: "ACTIVE",
@@ -153,6 +164,36 @@ describe("Grading & Aggregation (F2)", () => {
     expect(scoreboardSnap.data()?.perRound?.[roundId]).toBe(1);
     expect(scoreboardSnap.data()?.total).toBe(1);
 
+    // 4b. Submit correct Multi-MC Answer
+    const multiMcAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${roundId}__${multiMcQuestionId}`);
+    await multiMcAnswerRef.set({
+      teamId,
+      roundId,
+      questionId: multiMcQuestionId,
+      answerText: "A,C",
+      submittedAt: new Date(),
+      points: 0,
+      validated: false,
+    });
+
+    // Wait for trigger to complete auto-grading and updating scoreboard
+    let multiMcAnswerData: any = null;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const snap = await multiMcAnswerRef.get();
+      if (snap.data()?.validated === true) {
+        multiMcAnswerData = snap.data();
+        break;
+      }
+    }
+    expect(multiMcAnswerData).toBeDefined();
+    expect(multiMcAnswerData.points).toBe(1);
+
+    // Verify scoreboard has 2 points now
+    scoreboardSnap = await adminDb.doc(`events/${eventId}/scoreboard/${teamId}`).get();
+    expect(scoreboardSnap.data()?.perRound?.[roundId]).toBe(2);
+    expect(scoreboardSnap.data()?.total).toBe(2);
+
     // 5. Submit Free-Text Answer (with extra spaces and symbols to check normalization)
     const ftAnswerRef = adminDb.doc(`events/${eventId}/answers/${teamId}__${roundId}__${ftQuestionId}`);
     await ftAnswerRef.set({
@@ -179,9 +220,9 @@ describe("Grading & Aggregation (F2)", () => {
     expect(ftAnswerData.points).toBe(1); // Normalization match
     expect(ftAnswerData.validated).toBe(false); // Free text is not auto-validated
 
-    // Scoreboard should still be 1 (since Free Text is validated: false)
+    // Scoreboard should still be 2 (since Free Text is validated: false)
     scoreboardSnap = await adminDb.doc(`events/${eventId}/scoreboard/${teamId}`).get();
-    expect(scoreboardSnap.data()?.total).toBe(1);
+    expect(scoreboardSnap.data()?.total).toBe(2);
 
     // 6. Transition round to VALIDATION
     await adminDb.doc(`events/${eventId}/rounds/${roundId}`).update({
@@ -206,9 +247,9 @@ describe("Grading & Aggregation (F2)", () => {
     }
     expect(roundStatus).toBe("DONE");
 
-    // Verify scoreboard includes validated free-text answer (1.5) + MC answer (1) = 2.5
+    // Verify scoreboard includes validated free-text answer (1.5) + MC answer (1) + Multi-MC answer (1) = 3.5
     scoreboardSnap = await adminDb.doc(`events/${eventId}/scoreboard/${teamId}`).get();
-    expect(scoreboardSnap.data()?.perRound?.[roundId]).toBe(2.5);
-    expect(scoreboardSnap.data()?.total).toBe(2.5);
+    expect(scoreboardSnap.data()?.perRound?.[roundId]).toBe(3.5);
+    expect(scoreboardSnap.data()?.total).toBe(3.5);
   });
 });

@@ -36,7 +36,7 @@ export interface RoundDetail {
   description: string;
 }
 
-export type QuestionType = 'MULTIPLE_CHOICE' | 'FREE_TEXT';
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'FREE_TEXT';
 export type QuestionStatus = 'INACTIVE' | 'ACTIVE';
 
 export interface Question {

@@ -22,6 +22,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Grid from "@mui/material/Grid";
 import Radio from "@mui/material/Radio";
+import Checkbox from "@mui/material/Checkbox";
 import type { Question, QuestionDetail, QuestionSecretAnswer } from "../types";
 
 export function QuestionEditor() {
@@ -36,13 +37,13 @@ export function QuestionEditor() {
   // Edit fields
   const [editNumber, setEditNumber] = useState(1);
   const [editTitle, setEditTitle] = useState("");
-  const [editType, setEditType] = useState<Question["type"]>("MULTIPLE_CHOICE");
+  const [editType, setEditType] = useState<Question["type"]>("SINGLE_CHOICE");
   const [editStatus, setEditStatus] = useState<Question["status"]>("INACTIVE");
   const [editContent, setEditContent] = useState("");
   
   // Possible answers for MC (always keep 5 options for interface consistency)
   const [mcChoices, setMcChoices] = useState<string[]>(["", "", "", "", ""]);
-  const [mcCorrectIndex, setMcCorrectIndex] = useState<number>(0);
+  const [mcCorrectIndices, setMcCorrectIndices] = useState<number[]>([]);
   
   // Correct answer for Free text
   const [correctAnswerText, setCorrectAnswerText] = useState("");
@@ -113,13 +114,19 @@ export function QuestionEditor() {
     };
   }, [eventId, roundId, questionId]);
 
-  // Set the mcCorrectIndex based on choices matching correct answer text
+  // Set the mcCorrectIndices based on choices matching correct answer text
   useEffect(() => {
-    if (editType === "MULTIPLE_CHOICE" && correctAnswerText) {
-      const idx = mcChoices.findIndex((c) => c === correctAnswerText);
-      if (idx !== -1) {
-        setMcCorrectIndex(idx);
-      }
+    if ((editType === "MULTIPLE_CHOICE" || editType === "SINGLE_CHOICE") && correctAnswerText) {
+      const correctAnswers = correctAnswerText.split(",").map((s) => s.trim());
+      const indices: number[] = [];
+      mcChoices.forEach((choice, idx) => {
+        if (choice && correctAnswers.includes(choice)) {
+          indices.push(idx);
+        }
+      });
+      setMcCorrectIndices(indices);
+    } else {
+      setMcCorrectIndices([]);
     }
   }, [mcChoices, correctAnswerText, editType]);
 
@@ -132,9 +139,18 @@ export function QuestionEditor() {
       let correct = correctAnswerText;
       let finalChoices: string[] = [];
 
-      if (editType === "MULTIPLE_CHOICE") {
+      if (editType === "MULTIPLE_CHOICE" || editType === "SINGLE_CHOICE") {
         finalChoices = mcChoices.filter((c) => c.trim() !== "");
-        correct = mcChoices[mcCorrectIndex] || "";
+        if (editType === "SINGLE_CHOICE") {
+          const firstIndex = mcCorrectIndices[0];
+          correct = firstIndex !== undefined ? mcChoices[firstIndex] || "" : "";
+        } else {
+          const selected = mcCorrectIndices
+            .sort((a, b) => a - b)
+            .map((idx) => mcChoices[idx])
+            .filter((val) => val && val.trim() !== "");
+          correct = selected.join(",");
+        }
       }
 
       await updateDoc(doc(db, `events/${eventId}/rounds/${roundId}/questions/${questionId}`), {
@@ -297,23 +313,40 @@ export function QuestionEditor() {
                         },
                       }}
                     >
+                      <option value="SINGLE_CHOICE">Single Choice</option>
                       <option value="MULTIPLE_CHOICE">Multiple Choice</option>
                       <option value="FREE_TEXT">Freitext</option>
                     </TextField>
                   </Grid>
 
-                  {/* Multiple Choice Options */}
-                  {editType === "MULTIPLE_CHOICE" && (
+                  {/* Single Choice / Multiple Choice Options */}
+                  {(editType === "SINGLE_CHOICE" || editType === "MULTIPLE_CHOICE") && (
                     <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
                       <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                        Multiple Choice Antwortoptionen (und richtige Antwort auswählen)
+                        {editType === "SINGLE_CHOICE"
+                          ? "Single Choice Antwortoptionen (und richtige Antwort auswählen)"
+                          : "Multiple Choice Antwortoptionen (und richtige Antworten auswählen)"}
                       </Typography>
                       {mcChoices.map((choice, i) => (
                         <Box key={i} sx={{ display: "flex", alignItems: "center", mb: 2, gap: 2 }}>
-                          <Radio
-                            checked={mcCorrectIndex === i}
-                            onChange={() => setMcCorrectIndex(i)}
-                          />
+                          {editType === "SINGLE_CHOICE" ? (
+                            <Radio
+                              checked={mcCorrectIndices.includes(i)}
+                              onChange={() => setMcCorrectIndices([i])}
+                            />
+                          ) : (
+                            <Checkbox
+                              checked={mcCorrectIndices.includes(i)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setMcCorrectIndices((prev) => [...prev, i]);
+                                } else {
+                                  setMcCorrectIndices((prev) => prev.filter((idx) => idx !== i));
+                                }
+                              }}
+                              color="secondary"
+                            />
+                          )}
                           <TextField
                             label={`Option ${i + 1}`}
                             fullWidth

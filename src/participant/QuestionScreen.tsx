@@ -21,6 +21,7 @@ import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormControl from "@mui/material/FormControl";
+import Checkbox from "@mui/material/Checkbox";
 
 export function QuestionScreen() {
   const { eventId, roundId, questionId } = useParams<{ eventId: string; roundId: string; questionId: string }>();
@@ -131,7 +132,22 @@ export function QuestionScreen() {
     };
   }, [eventId, roundId, questionId, teamId, isAuthorized]);
 
-  // Immediately clear answers when switching questions to prevent prefilling state leaks
+  // Parse answer input as list of selected answers for checkboxes
+  const selectedAnswers = answerInput ? answerInput.split(",").map((s) => s.trim()) : [];
+
+  const handleCheckboxChange = (option: string, checked: boolean) => {
+    let nextSelected: string[];
+    if (checked) {
+      nextSelected = [...selectedAnswers, option];
+    } else {
+      nextSelected = selectedAnswers.filter((item) => item !== option);
+    }
+    nextSelected.sort();
+    const nextVal = nextSelected.join(",");
+    setAnswerInput(nextVal);
+    handleSaveAnswer(nextVal);
+  };
+
   useEffect(() => {
     setExistingAnswer(null);
     setAnswerInput("");
@@ -228,7 +244,7 @@ export function QuestionScreen() {
                 {/* Answer Options */}
                 {canAnswer ? (
                   <Box sx={{ mt: 2 }}>
-                    {question.type === "MULTIPLE_CHOICE" ? (
+                    {question.type === "SINGLE_CHOICE" ? (
                       <FormControl component="fieldset" fullWidth>
                         <RadioGroup
                           value={answerInput}
@@ -258,6 +274,37 @@ export function QuestionScreen() {
                             />
                           ))}
                         </RadioGroup>
+                      </FormControl>
+                    ) : question.type === "MULTIPLE_CHOICE" ? (
+                      <FormControl component="fieldset" fullWidth>
+                        {detail?.possibleAnswers?.map((ansOpt, idx) => {
+                          const isChecked = selectedAnswers.includes(ansOpt);
+                          return (
+                            <FormControlLabel
+                              key={idx}
+                              control={
+                                <Checkbox
+                                  checked={isChecked}
+                                  onChange={(e) => handleCheckboxChange(ansOpt, e.target.checked)}
+                                  color="secondary"
+                                />
+                              }
+                              label={ansOpt}
+                              sx={{
+                                border: "1px solid rgba(255, 255, 255, 0.08)",
+                                borderRadius: 2,
+                                p: 1.5,
+                                mb: 2,
+                                width: "100%",
+                                marginLeft: 0,
+                                marginRight: 0,
+                                "&:hover": {
+                                  backgroundColor: "rgba(124, 77, 255, 0.08)",
+                                },
+                              }}
+                            />
+                          );
+                        })}
                       </FormControl>
                     ) : (
                       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
