@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { doc, collection, onSnapshot, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, collection, onSnapshot, query, where, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useClaims } from "../hooks/useClaims";
 import type { Round, RoundDetail, Question, Answer } from "../types";
@@ -31,6 +31,7 @@ export function RoundScreen() {
   const [detail, setDetail] = useState<RoundDetail | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [correctAnswers, setCorrectAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [challenging, setChallenging] = useState<Record<string, boolean>>({});
@@ -147,6 +148,33 @@ export function RoundScreen() {
     };
   }, [eventId, roundId, isAuthorized, round?.status]);
 
+  // Load correct answers if round is DONE
+  useEffect(() => {
+    if (!eventId || !roundId || !isAuthorized || round?.status !== "DONE" || questions.length === 0) {
+      setCorrectAnswers({});
+      return;
+    }
+
+    const loadCorrectAnswers = async () => {
+      const answersMap: Record<string, string> = {};
+      for (const qItem of questions) {
+        try {
+          const sSnap = await getDoc(
+            doc(db, "events", eventId, "rounds", roundId, "questions", qItem.id, "secret", "answer")
+          );
+          if (sSnap.exists()) {
+            answersMap[qItem.id] = sSnap.data().correctAnswer || "";
+          }
+        } catch (err) {
+          console.error(`Error loading secret answer for ${qItem.id}:`, err);
+        }
+      }
+      setCorrectAnswers(answersMap);
+    };
+
+    loadCorrectAnswers();
+  }, [eventId, roundId, isAuthorized, round?.status, questions]);
+
   if (claimsLoading || loading) {
     return (
       <Container sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8 }}>
@@ -207,11 +235,19 @@ export function RoundScreen() {
                           </Typography>
                         }
                         secondary={
-                          isAnswered
-                            ? `Beantwortet: ${answers[qItem.id].answerText}`
-                            : isQuestionActive
-                              ? "Offen"
-                              : "Gesperrt"
+                          <>
+                            {isAnswered
+                              ? `Beantwortet: ${answers[qItem.id].answerText}`
+                              : isQuestionActive
+                                ? "Offen"
+                                : "Gesperrt"}
+                            {round?.status === "DONE" && correctAnswers[qItem.id] !== undefined && (
+                              <>
+                                <br />
+                                Richtig: {correctAnswers[qItem.id]}
+                              </>
+                            )}
+                          </>
                         }
                       />
                       <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>

@@ -235,7 +235,8 @@ service cloud.firestore {
           }
 
           match /secret/answer {
-            allow read, write: if isAdmin(eventId);
+            allow read: if isAdmin(eventId) || (isEventMember(eventId) && getRound(eventId, roundId).status == 'DONE');
+            allow write: if isAdmin(eventId);
           }
         }
       }

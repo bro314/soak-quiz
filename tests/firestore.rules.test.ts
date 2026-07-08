@@ -160,8 +160,8 @@ describe('Firestore Security Rules', () => {
     });
   });
 
-  describe('Invariant 4: questions/{q}/secret/answer is NEVER readable by a participant', () => {
-    it('allows admin to read answer, but denies team', async () => {
+  describe('Invariant 4: questions/{q}/secret/answer is readable by a participant only when round status is DONE', () => {
+    it('allows admin to read answer, and denies team unless round is DONE', async () => {
       const eventId = 'event_123';
       const adminDb = getAdminClient(eventId);
 
@@ -174,8 +174,12 @@ describe('Firestore Security Rules', () => {
       // Admin can read
       await assertSucceeds(getDoc(doc(adminDb, `events/${eventId}/rounds/round1/questions/q1/secret/answer`)));
 
-      // Team cannot read
+      // Team cannot read when round is ACTIVE
       await assertFails(getDoc(doc(teamDb, `events/${eventId}/rounds/round1/questions/q1/secret/answer`)));
+
+      // Team can read when round is DONE
+      await updateDoc(doc(adminDb, `events/${eventId}/rounds/round1`), { status: 'DONE' });
+      await assertSucceeds(getDoc(doc(teamDb, `events/${eventId}/rounds/round1/questions/q1/secret/answer`)));
     });
   });
 
