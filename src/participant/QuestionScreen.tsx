@@ -157,7 +157,6 @@ export function QuestionScreen() {
     nextSelected.sort();
     const nextVal = nextSelected.join(",");
     setAnswerInput(nextVal);
-    handleSaveAnswer(nextVal);
   };
 
   useEffect(() => {
@@ -317,6 +316,18 @@ export function QuestionScreen() {
                             />
                           );
                         })}
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          size="large"
+                          startIcon={<SaveIcon />}
+                          onClick={() => handleSaveAnswer()}
+                          disabled={saving}
+                          fullWidth
+                          sx={{ mt: 1 }}
+                        >
+                          {saving ? <CircularProgress size={24} color="inherit" /> : "Antwort speichern"}
+                        </Button>
                       </FormControl>
                     ) : (
                       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
