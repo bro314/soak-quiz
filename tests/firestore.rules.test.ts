@@ -221,6 +221,9 @@ describe('Firestore Security Rules', () => {
       const eventId = 'event_123';
       const adminDb = getAdminClient(eventId);
 
+      // Seed event
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'ACTIVE' });
+
       // Set up question and round states
       await setDoc(doc(adminDb, `events/${eventId}/rounds/round_active`), { number: 1, title: 'Round Active', status: 'ACTIVE' });
       await setDoc(doc(adminDb, `events/${eventId}/rounds/round_active/questions/q_active`), { number: 1, type: 'FREE_TEXT', title: 'Q Active', status: 'ACTIVE' });
@@ -335,6 +338,9 @@ describe('Firestore Security Rules', () => {
       const teamAId = 'teamA';
       const teamDb = getTeamClient(teamAId, eventId);
 
+      // Seed event
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'ACTIVE' });
+
       // Seed a DONE round and a question
       await setDoc(doc(adminDb, `events/${eventId}/rounds/round_done`), { number: 1, title: 'Done Round', status: 'DONE' });
       await setDoc(doc(adminDb, `events/${eventId}/rounds/round_done/questions/q1`), { number: 1, type: 'FREE_TEXT', title: 'Q1', status: 'ACTIVE' });
@@ -376,6 +382,9 @@ describe('Firestore Security Rules', () => {
       const adminDb = getAdminClient(eventId);
       const teamAId = 'teamA';
       const teamDb = getTeamClient(teamAId, eventId);
+
+      // Seed event
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'ACTIVE' });
 
       // Set up round 1 (ACTIVE) with question-1
       await setDoc(doc(adminDb, `events/${eventId}/rounds/round1`), { number: 1, title: 'Round 1', status: 'ACTIVE' });
@@ -460,6 +469,60 @@ describe('Firestore Security Rules', () => {
       // Write by team -> Fails
       await assertFails(
         setDoc(doc(teamDb, `events/${eventId}/secret/auth`), { adminPasswordHash: 'some_hash' })
+      );
+    });
+  });
+
+  describe('Inactive Event answer protection', () => {
+    it('denies team from creating or updating normal answers when the event is INACTIVE', async () => {
+      const eventId = 'event_123';
+      const adminDb = getAdminClient(eventId);
+      const teamAId = 'teamA';
+      const teamDb = getTeamClient(teamAId, eventId);
+
+      // Seed event as INACTIVE
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'INACTIVE' });
+
+      // Seed round and question
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round1`), { number: 1, title: 'Round 1', status: 'ACTIVE' });
+      await setDoc(doc(adminDb, `events/${eventId}/rounds/round1/questions/q1`), { number: 1, type: 'FREE_TEXT', title: 'Q1', status: 'ACTIVE' });
+
+      const answerDocRef = doc(teamDb, `events/${eventId}/answers/${teamAId}__round1__q1`);
+
+      // Team tries to create answer -> Fails
+      await assertFails(
+        setDoc(answerDocRef, {
+          teamId: teamAId,
+          roundId: 'round1',
+          questionId: 'q1',
+          answerText: 'Paris',
+          submittedAt: new Date(),
+          points: 0,
+          validated: false,
+        })
+      );
+
+      // Now set event to ACTIVE and seed the answer
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'ACTIVE' });
+      await setDoc(doc(adminDb, `events/${eventId}/answers/${teamAId}__round1__q1`), {
+        teamId: teamAId,
+        roundId: 'round1',
+        questionId: 'q1',
+        answerText: 'Paris',
+        submittedAt: new Date(),
+        points: 0,
+        validated: false,
+      });
+
+      // Now set event back to INACTIVE
+      await setDoc(doc(adminDb, `events/${eventId}`), { name: 'Test Event', maxTeamSize: 6, status: 'INACTIVE' });
+
+      // Team tries to update answer text -> Fails
+      await assertFails(
+        updateDoc(answerDocRef, {
+          answerText: 'London',
+          submittedAt: new Date(),
+        })
       );
     });
   });

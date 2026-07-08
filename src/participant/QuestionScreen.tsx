@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { doc, collection, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useClaims } from "../hooks/useClaims";
-import type { Round, Question, QuestionDetail, Answer } from "../types";
+import type { Event, Round, Question, QuestionDetail, Answer } from "../types";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -30,6 +30,7 @@ export function QuestionScreen() {
   const navigate = useNavigate();
   const { claims, loading: claimsLoading } = useClaims();
 
+  const [event, setEvent] = useState<Event | null>(null);
   const [round, setRound] = useState<Round | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [questionsList, setQuestionsList] = useState<Question[]>([]);
@@ -74,6 +75,14 @@ export function QuestionScreen() {
     setSuccess("");
     setDetail(null);
 
+    // Listen to event status
+    const eventRef = doc(db, "events", eventId);
+    const unsubEvent = onSnapshot(eventRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setEvent({ id: docSnap.id, ...docSnap.data() } as Event);
+      }
+    });
+
     // Listen to round status
     const roundRef = doc(db, "events", eventId, "rounds", roundId);
     const unsubRound = onSnapshot(roundRef, (docSnap) => {
@@ -111,6 +120,7 @@ export function QuestionScreen() {
     });
 
     return () => {
+      unsubEvent();
       unsubRound();
       unsubQuestion();
       unsubAnswer();
@@ -167,13 +177,18 @@ export function QuestionScreen() {
   }, [questionId]);
 
 
+  const isEventActive = event?.status === "ACTIVE";
+  const isQuestionActive = question?.status === "ACTIVE";
+  const isRoundActive = round?.status === "ACTIVE";
+  const canAnswer = isEventActive && isQuestionActive && isRoundActive;
+
   // Find current index in list to enable Next/Prev buttons
   const currentIndex = questionsList.findIndex((q) => q.id === questionId);
   const prevQuestion = currentIndex > 0 ? questionsList[currentIndex - 1] : null;
   const nextQuestion = currentIndex !== -1 && currentIndex < questionsList.length - 1 ? questionsList[currentIndex + 1] : null;
 
   const handleSaveAnswer = async (valToSave?: string) => {
-    if (!eventId || !roundId || !questionId || !teamId) return;
+    if (!eventId || !roundId || !questionId || !teamId || !canAnswer) return;
     const finalVal = valToSave !== undefined ? valToSave : answerInput;
 
     setSaving(true);
@@ -211,10 +226,6 @@ export function QuestionScreen() {
       </Container>
     );
   }
-
-  const isQuestionActive = question?.status === "ACTIVE";
-  const isRoundActive = round?.status === "ACTIVE";
-  const canAnswer = isQuestionActive && isRoundActive;
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
@@ -357,7 +368,9 @@ export function QuestionScreen() {
                 ) : (
                   <Box sx={{ mt: 2, p: 2, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.04)", border: "1px dashed rgba(255, 255, 255, 0.1)" }}>
                     <Typography variant="body2" color="text.secondary">
-                      {!isRoundActive
+                      {!isEventActive
+                        ? "Event inaktiv. Antwort kann nicht mehr geändert werden."
+                        : !isRoundActive
                         ? "Runde geschlossen. Antwort kann nicht mehr geändert werden."
                         : "Frage gesperrt."}
                     </Typography>

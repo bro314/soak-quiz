@@ -118,6 +118,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/events/$(eventId)/rounds/$(roundId)/questions/$(questionId)).data;
     }
 
+    function getEvent(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data;
+    }
+
     // ===============================================================
     // Validation Helpers
     // ===============================================================
@@ -257,6 +261,7 @@ service cloud.firestore {
             isValidAnswer(request.resource.data) &&
             request.resource.data.points == 0 &&
             request.resource.data.validated == false &&
+            getEvent(eventId).status == 'ACTIVE' &&
             getQuestion(eventId, request.resource.data.roundId, request.resource.data.questionId).status == 'ACTIVE' &&
             !(getRound(eventId, request.resource.data.roundId).status in ['VALIDATION', 'DONE', 'INACTIVE'])
           )
@@ -270,6 +275,7 @@ service cloud.firestore {
             request.resource.data.teamId == resource.data.teamId &&
             request.resource.data.roundId == resource.data.roundId &&
             request.resource.data.questionId == resource.data.questionId &&
+            getEvent(eventId).status == 'ACTIVE' &&
             (
               // Case 1: Normal answer update (only when round is active, question is active, points/validated unchanged)
               (
