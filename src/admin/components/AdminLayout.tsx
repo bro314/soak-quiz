@@ -50,7 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </Toolbar>
       </AppBar>
 
-      <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
+      <Container component="main" maxWidth={false} sx={{ flexGrow: 1, py: 4 }}>
         {children}
       </Container>
     </Box>

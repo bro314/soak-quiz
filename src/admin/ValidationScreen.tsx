@@ -25,7 +25,10 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import type { Answer, Question, Round } from "../types";
 import { getQuestionLetter } from "../utils/question";
-
+function truncate(str: string, maxLength: number = 16): string {
+  if (str.length <= maxLength) return str;
+  return str.substring(0, maxLength) + "...";
+}
 
 export function ValidationScreen() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -55,7 +58,7 @@ export function ValidationScreen() {
     if (!eventId) return;
 
     setLoading(true);
-    
+
     // Listen to teams
     const unsubTeams = onSnapshot(collection(db, `events/${eventId}/teams`), (snap) => {
       const tMap = new Map<string, string>();
@@ -117,7 +120,7 @@ export function ValidationScreen() {
 
       for (const ans of answers) {
         const cacheKey = `${ans.roundId}__${ans.questionId}`;
-        
+
         // Load question details
         if (!qMap.has(cacheKey)) {
           try {
@@ -167,9 +170,9 @@ export function ValidationScreen() {
     setEditPoints((prev) => ({ ...prev, ...next }));
   }, [answers]);
 
-  const handleValidate = async (ans: Answer) => {
+  const handleValidate = async (ans: Answer, customPoints?: number) => {
     if (!eventId) return;
-    const pts = Number(editPoints[ans.id]);
+    const pts = customPoints !== undefined ? customPoints : Number(editPoints[ans.id]);
     if (isNaN(pts)) {
       setSnackbar({ open: true, message: "Punkte müssen eine Zahl sein.", severity: "error" });
       return;
@@ -214,7 +217,7 @@ export function ValidationScreen() {
   return (
     <AdminRouteGuard>
       <AdminLayout>
-        <Container maxWidth="xl">
+        <Container maxWidth={false}>
           <Button
             component={Link}
             to={`/admin/event/${eventId}`}
@@ -236,16 +239,16 @@ export function ValidationScreen() {
                 </Typography>
               ) : (
                 <TableContainer component={Paper} sx={{ bgcolor: "transparent", backgroundImage: "none" }}>
-                  <Table>
+                  <Table sx={{ "& .MuiTableCell-root": { fontSize: "1.05rem", py: 1, px: 1.5, whiteSpace: "nowrap" } }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Runde / Frage</TableCell>
-                        <TableCell>Frage-Titel</TableCell>
-                        <TableCell>Soll-Antwort</TableCell>
+                        <TableCell>Frage</TableCell>
                         <TableCell>Team</TableCell>
-                        <TableCell>Ist-Antwort</TableCell>
-                        <TableCell sx={{ width: 120 }}>Punkte</TableCell>
-                        <TableCell align="right">Aktion</TableCell>
+                        <TableCell>Titel</TableCell>
+                        <TableCell sx={{ width: 250, minWidth: 250 }}>Soll</TableCell>
+                        <TableCell sx={{ width: 250, minWidth: 250 }}>Ist</TableCell>
+                        <TableCell align="left" sx={{ width: "100%" }}>Aktionen</TableCell>
+                        <TableCell align="right">Manuell</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -262,39 +265,76 @@ export function ValidationScreen() {
                             <TableCell>
                               R{r?.number || "—"} / {q?.number ? getQuestionLetter(q.number) : "—"}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>{q?.title || "Frage wird geladen..."}</TableCell>
-                            <TableCell color="text.secondary">{correctAns}</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>{teamName}</TableCell>
-                            <TableCell sx={{ color: "secondary.main", fontWeight: 600 }}>
-                              {ans.answerText}
+                            <TableCell sx={{ fontWeight: 600 }}>
+                              <span title={teamName}>
+                                {truncate(teamName)}
+                              </span>
                             </TableCell>
-                            <TableCell>
-                              <TextField
-                                size="small"
-                                type="number"
-                                slotProps={{
-                                  htmlInput: {
-                                    step: 0.5,
-                                    min: 0,
-                                  },
-                                }}
-                                value={editPoints[ans.id] || ""}
-                                onChange={(e) => handlePointsChange(ans.id, e.target.value)}
-                                error={isPtsInvalid}
-                                helperText={isPtsInvalid ? "Ungültige Zahl" : ""}
-                              />
+                            <TableCell sx={{ fontWeight: 600 }}>
+                              <span title={q?.title || "Frage wird geladen..."}>
+                                {truncate(q?.title || "Frage wird geladen...")}
+                              </span>
+                            </TableCell>
+                            <TableCell color="text.secondary" sx={{ width: 250, minWidth: 250, maxWidth: 250, whiteSpace: "normal" }}>
+                              <Box sx={{ width: 250, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                {correctAns}
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ color: "secondary.main", fontWeight: 600, width: 250, minWidth: 250, maxWidth: 250, whiteSpace: "normal" }}>
+                              <Box sx={{ width: 250, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                {ans.answerText}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="left">
+                              <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-start" }}>
+                                {[1, 0.5, 0].map((score) => {
+                                  const isSuggested = ans.points === score;
+                                  return (
+                                    <Button
+                                      key={score}
+                                      variant={isSuggested ? "contained" : "outlined"}
+                                      color="primary"
+                                      size="small"
+                                      onClick={() => handleValidate(ans, score)}
+                                      disabled={actionLoading[ans.id]}
+                                      sx={{ fontSize: "1.05rem", minWidth: "80px" }}
+                                    >
+                                      {score === 0.5 ? "0,5" : score}
+                                    </Button>
+                                  );
+                                })}
+                              </Box>
                             </TableCell>
                             <TableCell align="right">
-                              <Button
-                                variant="contained"
-                                color="success"
-                                size="small"
-                                startIcon={<CheckIcon />}
-                                onClick={() => handleValidate(ans)}
-                                disabled={actionLoading[ans.id] || isPtsInvalid}
-                              >
-                                {actionLoading[ans.id] ? <CircularProgress size={20} /> : "OK"}
-                              </Button>
+                              <Box sx={{ display: "flex", gap: 1, alignItems: "center", justifyContent: "flex-end" }}>
+                                <TextField
+                                  variant="standard"
+                                  size="small"
+                                  type="number"
+                                  slotProps={{
+                                    htmlInput: {
+                                      step: 0.5,
+                                      min: 0,
+                                      style: { width: "60px", fontSize: "1.05rem", textAlign: "center" }
+                                    },
+                                  }}
+                                  value={editPoints[ans.id] || ""}
+                                  onChange={(e) => handlePointsChange(ans.id, e.target.value)}
+                                  error={isPtsInvalid}
+                                  helperText={isPtsInvalid ? "Ungültige" : ""}
+                                  sx={{ m: 0 }}
+                                />
+                                <Button
+                                  variant="outlined"
+                                  color="primary"
+                                  size="small"
+                                  onClick={() => handleValidate(ans)}
+                                  disabled={actionLoading[ans.id] || isPtsInvalid}
+                                  sx={{ fontSize: "1.05rem" }}
+                                >
+                                  {actionLoading[ans.id] ? <CircularProgress size={20} /> : "Speichern"}
+                                </Button>
+                              </Box>
                             </TableCell>
                           </TableRow>
                         );
